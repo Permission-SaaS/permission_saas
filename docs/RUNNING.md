@@ -22,29 +22,31 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Sobem cinco containers, na rede que o Compose cria para o projeto:
+Sobem seis containers, na rede que o Compose cria para o projeto:
 
 | Container            | Imagem                          | Porta na máquina            | Fala com                                                    |
 | -------------------- | ------------------------------- | --------------------------- | ----------------------------------------------------------- |
 | `config-server`      | `config-server/Dockerfile`      | 8888                        | — (lê `config-repo/`, montado como volume)                  |
-| `permission-service` | `permission-service/Dockerfile` | 8080                        | `config-server:8888`, `postgres:5432`, `audit-service:8081` |
-| `audit-service`      | `audit-service/Dockerfile`      | 8081                        | `config-server:8888`, `audit-postgres:5432`                 |
+| `permission-service` | `permission-service/Dockerfile` | 8080                        | `config-server:8888`, `postgres:5432`, `audit-service:8081`, `rabbitmq:5672` |
+| `audit-service`      | `audit-service/Dockerfile`      | 8081                        | `config-server:8888`, `audit-postgres:5432`, `rabbitmq:5672` |
 | `postgres`           | `postgres:16`                   | 5432 (`POSTGRES_HOST_PORT`) | —                                                           |
 | `audit-postgres`     | `postgres:16`                   | 5433                        | —                                                           |
+| `rabbitmq`           | `rabbitmq:4-management`         | 5672 · 15672 (painel)       | —                                                           |
 
-- As duas aplicações sobem com o profile `prod`, e só depois que o `config-server` e o banco de cada
-  uma estão `healthy`.
+- As duas aplicações sobem com o profile `prod`, e só depois que o `config-server`, o banco de cada
+  uma e o `rabbitmq` estão `healthy`.
 - Entre containers, o endereço é o **nome do serviço** e a porta de dentro, nunca `localhost`: num
   container, `localhost` é o próprio container.
 - As migrations do Flyway de cada aplicação rodam na subida, cada uma no seu banco.
-- Os dados ficam em volumes (`permission_saas_pgdata`, `audit_pgdata`), e o arquivo
-  `logs/audit-events.txt` do `audit-service` fica no volume `audit_logs`. Tudo isso sobrevive a
+- Os dados ficam em volumes (`permission_saas_pgdata`, `audit_pgdata`); o arquivo
+  `logs/audit-events.txt` do `audit-service` fica no volume `audit_logs`, e as mensagens do RabbitMQ
+  no `rabbitmq_data`. Tudo isso sobrevive a
   `docker compose down`; só `down -v` apaga.
 
 ```bash
 curl http://localhost:8080/ping                  # pong
 curl http://localhost:8081/actuator/health       # {"status":"UP",...}
-docker compose ps                                # os cinco como "healthy"
+docker compose ps                                # os seis como "healthy"
 ```
 
 **Porta 5432 ocupada** por um PostgreSQL instalado na máquina: publique o banco em outra porta com
@@ -77,6 +79,8 @@ Em `prod`, se faltar uma variável ou o Config Server não responder, o serviço
 | `DB_USERNAME` / `DB_PASSWORD`                              | os dois   | `saas`/`saas123` · `audit`/`audit123`                         | os mesmos, definidos no `docker-compose.yml`                     |
 | `SERVER_PORT`                                              | os dois   | `8080` · `8081`                                               | não definida (vale o padrão)                                      |
 | `AUDIT_SERVICE_URL`                                        | principal | `http://localhost:8081`                                       | não usada: o endereço vem do Config Server                       |
+| `RABBITMQ_HOST`                                            | os dois   | `localhost`                                                   | não usada: o endereço vem do Config Server                       |
+| `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD`                  | os dois   | `saas`/`saas123`                                              | os mesmos, definidos no `docker-compose.yml`                     |
 | `SWAGGER_USERNAME` / `SWAGGER_PASSWORD`                    | principal | `admin`/`admin123`                                            | vêm do `.env`                                                     |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `JWT_SECRET` | principal | valores de mentira                                            | vêm do `.env` (\*)                                                |
 | `POSTGRES_HOST_PORT`                                       | o Compose | —                                                             | `5432`: porta da **máquina** em que o banco principal é publicado |
@@ -96,7 +100,7 @@ profile. Os arquivos ficam em [`config-repo/`](../config-repo/) (ADR-012):
 
 | Arquivo                                   | Vale para                        | O que tem                              |
 | ----------------------------------------- | -------------------------------- | -------------------------------------- |
-| `config-repo/application-prod.yml`        | todos os serviços em `prod`      | log de SQL desligado                   |
+| `config-repo/application-prod.yml`        | todos os serviços em `prod`      | log de SQL desligado, endereço do RabbitMQ |
 | `config-repo/permission-service-prod.yml` | a aplicação principal em `prod`  | endereço do banco e do `audit-service` |
 | `config-repo/audit-service-prod.yml`      | o `audit-service` em `prod`      | endereço do banco                      |
 
@@ -112,12 +116,30 @@ Para mudar uma configuração, edite o arquivo em `config-repo/` e reinicie só 
 exemplo `docker compose restart audit-service`. Não é preciso rebuild, porque o `config-repo/` entra
 no container como volume.
 
+## Mensageria (RabbitMQ)
+
+A gravação da auditoria vai por mensagem: a aplicação principal publica cada validação de permissão
+na fila `audit.events`, e o `audit-service` consome e grava (ADR-013; o formato da mensagem está em
+[`API.md`](API.md) → "Mensageria").
+
+- **Painel:** http://localhost:15672, usuário `saas`, senha `saas123`. Na aba *Queues* estão a
+  `audit.events` e a `audit.events.dlq`, para onde vão as mensagens que não puderam ser gravadas.
+- **Ver as mensagens sem tirá-las da fila:** na fila, *Get messages* com *Ack mode* = "Nack message
+  requeue true". As contagens da fila (*Ready*, *Consumers*) são atualizadas a cada 5 segundos, então
+  logo depois de uma mudança podem estar atrasadas; o *Get messages* mostra o que está lá na hora.
+- **Logs do fluxo:** `docker compose logs -f permission-service audit-service | grep "Audit message"`
+  mostra cada mensagem publicada (`published`) e gravada (`registered`).
+- **Demonstração com o consumidor parado:** `docker compose stop audit-service`, valide permissões, veja
+  as mensagens esperando na fila e religue com `docker compose start audit-service`. A pasta
+  `audit-service fora do ar` do Postman faz o roteiro com asserções.
+
 ## Rodar na máquina (profile `dev`)
 
-Só os bancos no Docker; as aplicações na IDE ou no terminal, cada uma no seu:
+Só a infraestrutura no Docker (os bancos e o RabbitMQ); as aplicações na IDE ou no terminal, cada
+uma no seu:
 
 ```bash
-docker compose up -d postgres audit-postgres
+docker compose up -d postgres audit-postgres rabbitmq
 cd permission-service && ./mvnw spring-boot:run   # 8080, banco em localhost:5432
 cd audit-service && ./mvnw spring-boot:run        # 8081, banco em localhost:5433
 ```

@@ -10,7 +10,7 @@ construído como projeto de longo prazo ao longo da Pós-Graduação: cada disci
 este mesmo código em vez de começar um projeto do zero. O que cada uma acrescentou está em
 [Evolução](#evolução).
 
-**Stack:** Java 21 · Spring Boot 4.1.0 · Spring Data JPA · PostgreSQL 16 · Flyway · Spring Modulith · Spring Cloud OpenFeign · Spring Cloud Config · Docker Compose · Maven
+**Stack:** Java 21 · Spring Boot 4.1.0 · Spring Data JPA · PostgreSQL 16 · Flyway · Spring Modulith · Spring Cloud OpenFeign · Spring Cloud Config · RabbitMQ · Docker Compose · Maven
 
 ---
 
@@ -30,10 +30,11 @@ docker compose up -d --build
 | `config-server`      | 8888  | configuração centralizada, lida de `config-repo/`            |
 | `postgres`           | 5432  | banco da aplicação principal                                 |
 | `audit-postgres`     | 5433  | banco do `audit-service`                                     |
+| `rabbitmq`           | 5672  | broker de mensagens; painel em http://localhost:15672 (`saas`/`saas123`) |
 
 ```bash
 curl http://localhost:8080/ping                  # pong
-docker compose ps                                # os cinco como "healthy"
+docker compose ps                                # os seis como "healthy"
 ```
 
 O caminho feliz completo (cliente → plano → ApiKey → projeto → validação → auditoria) está na pasta
@@ -191,9 +192,12 @@ A extração da etapa 2. O porquê da escolha está em
 próprios nos dois lados; nenhuma entidade JPA atravessa a rede. Swagger em
 `http://localhost:8081/swagger-ui/index.html`; detalhes em [`docs/API.md`](docs/API.md).
 
-**Comunicação.** A aplicação principal chama o serviço pelo cliente OpenFeign `AuditClient`,
-sempre atrás da porta `AuditTrail`: nenhum controller conhece o Feign. O endereço vem da
-configuração (`audit.service.url`), nunca do código Java.
+**Comunicação.** Cada operação usa o estilo que combina com ela. A **consulta** é REST: a
+aplicação principal chama o serviço pelo cliente OpenFeign `AuditClient`, atrás da porta
+`AuditTrail`, porque quem consulta precisa da resposta na hora. A **gravação**, desde a etapa 4,
+é uma mensagem na fila `audit.events` do RabbitMQ, atrás da porta `AuditEventPublisher`, porque
+ninguém espera por ela. Nenhum controller conhece o Feign nem o RabbitMQ, e os endereços vêm da
+configuração, nunca do código Java.
 
 ```
 Cliente HTTP
@@ -201,21 +205,23 @@ Cliente HTTP
 permission-service (8080)
 ├── PermissionController → ValidatePermissionUseCase → publica PermissionValidatedEvent
 │                                                          ↓
-├── AuditLogListener (Observer) ───────────→ porta AuditTrail → AuditClient (@FeignClient)
-└── AuditEventController → SearchAuditEventsUseCase ↗                  ↓ HTTP
+├── AuditLogListener (Observer, @Async) → porta AuditEventPublisher → RabbitMQ: fila audit.events
+│                                                                          ↓ mensagem
+└── AuditEventController → SearchAuditEventsUseCase → porta AuditTrail → AuditClient (@FeignClient)
+                                                                          ↓ HTTP
                                                      audit-service (8081)
-                                                     ├── AuditEventController
-                                                     ├── RegisterPermissionCheckUseCase / SearchAuditEventsUseCase
-                                                     └── AuditEventRepository → PostgreSQL audit_db
+                                                     ├── AuditMessageListener (consome a fila)
+                                                     ├── AuditEventController (GET /audit-events)
+                                                     └── use cases → AuditEventRepository → PostgreSQL audit_db
 ```
 
-**Falha de comunicação.** O cliente desiste em 1s para conectar e 2s para ler. Cada
-operação trata a falha de um jeito:
+**Falha de comunicação.** Cada operação trata a falha de um jeito:
 
-- **Gravação** — a validação de permissão responde normalmente; o `AuditLogListener`
-  captura a falha e o evento se perde, com `WARN ... Audit event lost: ...` no log.
-- **Consulta** — `GET /audit-events` responde `503` com
-  `{"status":503,"error":"Service Unavailable","message":"Audit service is unavailable",...}`.
+- **Gravação:** a validação de permissão responde normalmente, sem esperar a auditoria. Com o
+  `audit-service` fora do ar, a mensagem **espera na fila** e é gravada quando ele volta. Só com o
+  próprio RabbitMQ fora do ar o evento se perde, com `WARN ... Audit event lost: ...` no log.
+- **Consulta:** o cliente desiste em 1s para conectar e 2s para ler, e o `GET /audit-events`
+  responde `503` com `{"status":503,"error":"Service Unavailable","message":"Audit service is unavailable",...}`.
   O detalhe do Feign só vai para o log.
 
 **Como testar** (coleção em [`docs/postman/`](docs/postman/)):
@@ -354,9 +360,10 @@ geração de ApiKey, middleware de validação de permissão aplicando a regra r
 histórico de concessão e revogação, e trilha de auditoria em banco e arquivo texto —
 desde a etapa 2 no [`audit-service`](#serviço-independente-audit-service), chamado por
 OpenFeign. Desde a etapa 3, as três aplicações rodam em containers com Docker Compose, com
-profiles `dev`/`prod` e configuração centralizada num Config Server.
+profiles `dev`/`prod` e configuração centralizada num Config Server. Desde a etapa 4, a gravação
+da auditoria vai por mensagem (RabbitMQ), e o evento espera na fila se o `audit-service` cair.
 
-**Em desenvolvimento:** mensageria e processamento em lote — o restante do escopo
+**Em desenvolvimento:** processamento em lote (Spring Batch) — o restante do escopo
 da disciplina de microsserviços, descrito em
 [Evolução](#evolução).
 

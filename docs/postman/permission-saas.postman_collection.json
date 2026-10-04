@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Permission SaaS",
-    "description": "Colecao de requisicoes da API do Permission SaaS.\n\nOrdem sugerida: execute a pasta 'Fluxo completo' de cima para baixo — cada requisicao guarda em variaveis de colecao o que a proxima precisa (clientId, planId, apiKey, projectId).\n\nVariavel baseUrl: http://localhost:8080\n\nVariavel auditBaseUrl: http://localhost:8081 — usada pela pasta 'audit-service (8081)', que chama o servico extraido direto.\n\nVariavel configBaseUrl: http://localhost:8888 — usada pela pasta 'config-server (8888)', que mostra a configuracao centralizada.\n\nPasta 'audit-service fora do ar': roteiro da demonstracao de indisponibilidade — pare o audit-service antes das requisicoes 1 e 2 e religue antes da 3.",
+    "description": "Colecao de requisicoes da API do Permission SaaS.\n\nOrdem sugerida: execute a pasta 'Fluxo completo' de cima para baixo — cada requisicao guarda em variaveis de colecao o que a proxima precisa (clientId, planId, apiKey, projectId).\n\nVariavel baseUrl: http://localhost:8080\n\nVariavel auditBaseUrl: http://localhost:8081 — usada pela pasta 'audit-service (8081)', que chama o servico extraido direto.\n\nVariavel configBaseUrl: http://localhost:8888 — usada pela pasta 'config-server (8888)', que mostra a configuracao centralizada.\n\nPasta 'audit-service fora do ar': roteiro da demonstracao com o consumidor parado — pare o audit-service antes das requisicoes 1 a 3 e religue antes da 4.\n\nVariaveis rabbitBaseUrl, rabbitUser e rabbitPassword: a API do painel do RabbitMQ (http://localhost:15672), usada para ver a fila audit.events.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -16,6 +16,18 @@
     {
       "key": "configBaseUrl",
       "value": "http://localhost:8888"
+    },
+    {
+      "key": "rabbitPassword",
+      "value": "saas123"
+    },
+    {
+      "key": "rabbitUser",
+      "value": "saas"
+    },
+    {
+      "key": "rabbitBaseUrl",
+      "value": "http://localhost:15672"
     },
     {
       "key": "clientId",
@@ -594,6 +606,16 @@
             "description": "Deve conter os dois eventos gerados pelas validacoes acima."
           },
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// a auditoria e publicada em segundo plano e gravada pelo consumidor da fila: espera ela chegar",
+                  "setTimeout(() => {}, 1500);"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -2004,10 +2026,10 @@
     },
     {
       "name": "audit-service fora do ar",
-      "description": "Demonstra o que a aplicacao principal faz quando o audit-service nao responde.\n\nPre-requisito: rodar antes a pasta 'Fluxo completo' (preenche apiKey e projectId).\n\nRoteiro:\n1. Pare o audit-service (Ctrl+C no terminal dele, ou pare so ele no compound de debug do VS Code). A aplicacao principal continua no ar.\n2. Rode as requisicoes 1 e 2.\n3. Religue o audit-service e rode as requisicoes 3, 4 e 5.\n\nAs outras duas demonstracoes do enunciado ficam em outras pastas: o servico isolado em 'audit-service (8081)' e a operacao pela aplicacao principal em 'Fluxo completo' (9 a 14) e 'Audit'.",
+      "description": "Demonstra o que acontece quando o audit-service, o consumidor da fila, esta fora do ar.\n\nPre-requisito: rodar antes a pasta 'Fluxo completo' (preenche apiKey e projectId).\n\nRoteiro:\n1. Pare o audit-service: docker compose stop audit-service.\n2. Rode as requisicoes 1, 2 e 3.\n3. Religue: docker compose start audit-service, e espere ele ficar healthy (docker compose ps).\n4. Rode as requisicoes 4 e 5.\n\nA gravacao vai pela fila (RabbitMQ) e espera o consumidor voltar; a consulta e HTTP e responde 503 enquanto ele esta fora. A fila tambem pode ser acompanhada no painel do RabbitMQ: http://localhost:15672 (usuario saas, senha saas123), aba Queues.",
       "item": [
         {
-          "name": "1. 200 — validacao segue respondendo com o servico fora",
+          "name": "1. 200 — validacao segue respondendo com o consumidor fora",
           "event": [
             {
               "listen": "prerequest",
@@ -2024,8 +2046,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('permitido', () => pm.expect(pm.response.json().granted).to.eql(true));",
-                  "pm.test('responde dentro dos timeouts do Feign', () => pm.expect(pm.response.responseTime).to.be.below(3500));"
+                  "// permitida ou negada (se o projeto foi excluido pela pasta Projects), a validacao vai para a fila do mesmo jeito"
                 ]
               }
             }
@@ -2051,11 +2072,75 @@
                 "validate-permission"
               ]
             },
-            "description": "Com o audit-service parado. A validacao de permissao nao depende da auditoria: a resposta continua 200 e o log da aplicacao principal mostra WARN ... Audit event lost: ... — o evento desta requisicao se perde. O tempo de resposta fica limitado pelos timeouts do cliente Feign (1s para conectar, 2s para ler)."
+            "description": "Com o audit-service parado. A validacao de permissao nao espera a auditoria: responde 200 e publica a mensagem na fila audit.events, onde ela fica esperando o consumidor."
           }
         },
         {
-          "name": "2. 503 — consulta da trilha com o servico fora",
+          "name": "2. A mensagem espera na fila",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const messages = pm.response.json();",
+                  "pm.test('mensagem aguardando na fila', () => pm.expect(messages.length).to.be.at.least(1));",
+                  "pm.test('envelope da auditoria', () => {",
+                  "    const envelope = JSON.parse(messages[messages.length - 1].payload);",
+                  "    pm.expect(envelope.source).to.eql('permission-service');",
+                  "    pm.expect(envelope.type).to.eql('PERMISSION_CHECK');",
+                  "    pm.expect(envelope.payload.projectId).to.eql(pm.collectionVariables.get('projectId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"count\": 10,\n  \"ackmode\": \"ack_requeue_true\",\n  \"encoding\": \"auto\"\n}"
+            },
+            "url": {
+              "raw": "{{rabbitBaseUrl}}/api/queues/%2F/audit.events/get",
+              "host": [
+                "{{rabbitBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "queues",
+                "%2F",
+                "audit.events",
+                "get"
+              ]
+            },
+            "description": "Le as mensagens da fila audit.events pela API do painel do RabbitMQ, sem tira-las de la (ackmode ack_requeue_true, o mesmo que o botao \"Get messages\" com \"Nack message requeue true\"). Com o consumidor parado, a mensagem da requisicao 1 esta ali, no envelope {source, type, occurredAt, payload}. Le as mensagens em vez das contagens da fila porque o painel atualiza as contagens a cada 5 segundos."
+          }
+        },
+        {
+          "name": "3. 503 — consulta da trilha com o servico fora",
           "event": [
             {
               "listen": "test",
@@ -2084,96 +2169,29 @@
                 "audit-events"
               ]
             },
-            "description": "Com o audit-service parado. A consulta nao tem como ser respondida sem o servico, entao a aplicacao principal devolve 503 com uma mensagem generica — sem stack trace nem detalhe do Feign."
+            "description": "Com o audit-service parado. A consulta continua sendo HTTP (OpenFeign) e precisa da resposta na hora: sem o servico, a aplicacao principal devolve 503 com uma mensagem generica."
           }
         },
         {
-          "name": "3. 200 — servico religado, o evento da requisicao 1 se perdeu",
+          "name": "4. 200 — servico religado, o evento da requisicao 1 chegou",
           "event": [
             {
-              "listen": "test",
+              "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('nenhum evento desde a queda', () => pm.expect(pm.response.json()).to.have.lengthOf(0));"
+                  "// o painel do RabbitMQ e o consumidor atualizam com alguns segundos de atraso",
+                  "setTimeout(() => {}, 3000);"
                 ]
               }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/audit-events?projectId={{projectId}}&from={{outageStartedAt}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "audit-events"
-              ],
-              "query": [
-                {
-                  "key": "projectId",
-                  "value": "{{projectId}}"
-                },
-                {
-                  "key": "from",
-                  "value": "{{outageStartedAt}}"
-                }
-              ]
             },
-            "description": "Com o audit-service de volta. A consulta volta a funcionar sem reiniciar a aplicacao principal, mas a trilha nao tem nada desde a requisicao 1: sem fila, o que nao foi entregue se perde. A Etapa 4 resolve com RabbitMQ."
-          }
-        },
-        {
-          "name": "4. 200 — validacao com o servico de volta",
-          "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('permitido', () => pm.expect(pm.response.json().granted).to.eql(true));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"apiKey\": \"{{apiKey}}\",\n  \"projectId\": \"{{projectId}}\",\n  \"role\": \"ADMIN\",\n  \"httpMethod\": \"GET\",\n  \"route\": \"/users\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/validate-permission",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "validate-permission"
-              ]
-            },
-            "description": "Com o audit-service de volta. Mesma validacao da requisicao 1; desta vez o evento chega ao servico."
-          }
-        },
-        {
-          "name": "5. 200 — a trilha registra a nova validacao",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('so o evento da requisicao 4', () => {",
+                  "pm.test('o evento do periodo fora do ar nao se perdeu', () => {",
                   "    const events = pm.response.json();",
                   "    pm.expect(events).to.have.lengthOf(1);",
                   "    pm.expect(events[0].type).to.eql('PERMISSION_CHECK');",
@@ -2204,7 +2222,74 @@
                 }
               ]
             },
-            "description": "Desde a requisicao 1, a trilha tem um unico evento: o da requisicao 4."
+            "description": "Com o audit-service de volta. Ele consome o que esperava na fila e grava: a trilha tem o evento da requisicao 1, que na etapa 2 (HTTP) teria se perdido."
+          }
+        },
+        {
+          "name": "5. A fila esvaziou",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// o consumidor leva alguns instantes para processar o que esperava na fila",
+                  "setTimeout(() => {}, 2000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('fila vazia', () => pm.expect(pm.response.json()).to.have.lengthOf(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"count\": 10,\n  \"ackmode\": \"ack_requeue_true\",\n  \"encoding\": \"auto\"\n}"
+            },
+            "url": {
+              "raw": "{{rabbitBaseUrl}}/api/queues/%2F/audit.events/get",
+              "host": [
+                "{{rabbitBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "queues",
+                "%2F",
+                "audit.events",
+                "get"
+              ]
+            },
+            "description": "Com o audit-service de volta: a fila audit.events nao tem mais nenhuma mensagem pendente, porque o consumidor processou o que esperava."
           }
         }
       ]

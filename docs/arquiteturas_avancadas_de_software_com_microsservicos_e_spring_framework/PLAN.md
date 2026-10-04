@@ -197,7 +197,7 @@ Aplicação Principal → permissions_saas      audit-service → audit_db
 
 | Dia | Data       | Horas | Entrega                                                                                                                                                                                                                                                             |
 | --- | ---------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 12  | Sáb 03/10 | 4h    | RabbitMQ no compose; produtor na aplicação principal publicando o evento de validação na fila`audit.events`; consumidor no `audit-service` gravando no banco dele; demonstração com o consumidor parado (mensagem aguardando na fila) e depois religado   |
+| 12 ✅ | Sáb 03/10 | 4h    | **Feito em 03/10** (passo 16 de "Onde parou"): RabbitMQ no Compose; a aplicação principal publica cada validação na fila `audit.events` num envelope genérico; o `audit-service` consome e grava; fila de mensagens mortas; demonstração com o consumidor parado no Postman (ADR-013) |
 | 13  | Dom 04/10  | 4h    | Spring Batch:`Job` de importação de rotas por CSV com `Step`, `ItemReader`, `ItemProcessor`, `ItemWriter` e chunk; arquivo de exemplo com múltiplos registros; reflexão REST × mensageria × Batch no `README.md` → **tag `arq-etapa-4`** |
 | 14  | Seg 05/10  | 1–2h | Buffer:`./mvnw verify` nos quatro projetos, `docker compose up --build` do zero, coleção Postman atualizada, seção **Uso de IA**, PDF e postagem no Moodle                                                                                            |
 
@@ -226,11 +226,18 @@ crítico — a rubrica não pontua testes JUnit, e as demonstrações que ela pe
 serviço fora do ar, fila com consumidor parado) são manuais. Ficam como trabalho futuro, a começar
 pelo teste de integração das consultas do ADR-009.
 
-### Onde parou (atualizado em 02/10)
+### Onde parou (atualizado em 03/10)
 
-**Etapa 3 fechada em 02/10 com a tag `arq-etapa-3`.** Retomar pela **Etapa 4** (dias 12 e 13: RabbitMQ e
-Spring Batch). O Config Server, que o replanejamento empurrava para o fim de semana, já está feito.
-A sequência que levou à tag, para registro:
+**Etapa 4 em andamento.** A mensageria fechou em 03/10; retomar pelo **passo 17** (Spring Batch). A
+sequência até a tag `arq-etapa-4`:
+
+| Passo | Quem | Entrega |
+|---|---|---|
+| 16 ✅ | Claude (a decisão do envelope genérico foi do Jairo) | **Mensageria (ADR-013).** A gravação da auditoria sai do Feign e vai por mensagem. A porta `AuditEventPublisher` e o adapter `RabbitAuditEventPublisher` publicam na fila `audit.events`, num envelope `{source, type, occurredAt, payload}`. O `AuditMessageListener` do `audit-service` consome e grava pelo mesmo caso de uso do `POST`. A fila é durável e declarada pelos dois lados; o que não pode ser gravado vai para a `audit.events.dlq`, depois de 3 tentativas. O `AuditLogListener` virou `@Async`: com o broker parado, a resolução do nome demorava 5,5s e prendia a validação. A porta `AuditTrail` ficou só com a consulta (Feign). RabbitMQ no Compose (painel na 15672) e o endereço dele no `config-repo/`. A pasta `audit-service fora do ar` do Postman passou a mostrar a mensagem esperando na fila e chegando depois. Testado em 03/10: `clean verify` nos três projetos; consumidor parado (3 mensagens esperaram e foram gravadas na volta); 3 mensagens inválidas na `.dlq`; broker parado (validação em 0,4s, evento perdido com `WARN`); newman com a coleção inteira (63 requisições, 102 asserções) e o roteiro isolado (22 requisições, 39 asserções). Na revisão, achei um import errado (`MessageConverter` do Logback) que a IDE trocou porque ainda não tinha recarregado o `pom.xml`, e uma asserção do Postman que lia contagens atrasadas do painel; os dois foram corrigidos |
+| **17** | Jairo + Claude | **Spring Batch:** importação de rotas por CSV (Decisão 7). O Jairo escreve o `ItemProcessor` (normalizar método e path, descartar linha inválida e rota repetida); o Claude escreve o Job, o Step, o reader, o writer e o endpoint que dispara |
+| 18 | Jairo + Claude | Reflexão da Etapa 4 no `README.md` (6 perguntas, mais a diferença entre mensageria e Batch), seção **Uso de IA**, tag `arq-etapa-4` |
+
+A Etapa 3 fechou em 02/10 com a tag `arq-etapa-3`. A sequência que levou à tag, para registro:
 
 | Passo | Quem | Entrega |
 |---|---|---|
