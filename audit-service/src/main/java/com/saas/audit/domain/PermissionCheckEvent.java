@@ -15,6 +15,8 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode(callSuper = true)
 public class PermissionCheckEvent extends AuditEvent {
 
+    public static final String TYPE = "PERMISSION_CHECK";
+
     private String routePath;
     private String httpMethod;
     private String roleName;
@@ -39,6 +41,6 @@ public class PermissionCheckEvent extends AuditEvent {
 
     @Override
     public String type() {
-        return "PERMISSION_CHECK";
+        return TYPE;
     }
 }

@@ -1,5 +1,5 @@
-# Produção: o endereço do banco e o log de SQL vêm do Config Server, em
-# config-repo/audit-service-prod.yml. Usuário e senha vêm de variáveis de ambiente,
+# Produção: o endereço do banco e do RabbitMQ e o log de SQL vêm do Config Server,
+# em config-repo/. Usuários e senhas vêm de variáveis de ambiente,
 # sem valor padrão. Se o Config Server não responder ou faltar uma variável, o
 # serviço não sobe.
 spring:
@@ -9,3 +9,8 @@ spring:
   datasource:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+
+  # O endereço do broker vem do Config Server; as credenciais, de variáveis de ambiente.
+  rabbitmq:
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}

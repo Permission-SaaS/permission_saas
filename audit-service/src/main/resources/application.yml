@@ -17,6 +17,22 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  # Uma falha ao gravar (banco fora, por exemplo) é tentada de novo 3 vezes, com
+  # intervalo crescente; depois a mensagem vai para a fila de mensagens mortas.
+  rabbitmq:
+    listener:
+      simple:
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
+
+# Fila de onde o serviço consome os eventos de auditoria.
+audit:
+  messaging:
+    queue: audit.events
+
 server:
   port: ${SERVER_PORT:8081}
 

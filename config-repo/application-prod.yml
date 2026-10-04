@@ -2,3 +2,7 @@
 spring:
   jpa:
     show-sql: false
+
+  # O broker que a aplicação principal publica e o audit-service consome.
+  rabbitmq:
+    host: rabbitmq
