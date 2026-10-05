@@ -10,7 +10,7 @@ construído como projeto de longo prazo ao longo da Pós-Graduação: cada disci
 este mesmo código em vez de começar um projeto do zero. O que cada uma acrescentou está em
 [Evolução](#evolução).
 
-**Stack:** Java 21 · Spring Boot 4.1.0 · Spring Data JPA · PostgreSQL 16 · Flyway · Spring Modulith · Spring Cloud OpenFeign · Spring Cloud Config · RabbitMQ · Docker Compose · Maven
+**Stack:** Java 21 · Spring Boot 4.1.0 · Spring Data JPA · PostgreSQL 16 · Flyway · Spring Modulith · Spring Cloud OpenFeign · Spring Cloud Config · RabbitMQ · Spring Batch · Docker Compose · Maven
 
 ---
 
@@ -361,11 +361,9 @@ histórico de concessão e revogação, e trilha de auditoria em banco e arquivo
 desde a etapa 2 no [`audit-service`](#serviço-independente-audit-service), chamado por
 OpenFeign. Desde a etapa 3, as três aplicações rodam em containers com Docker Compose, com
 profiles `dev`/`prod` e configuração centralizada num Config Server. Desde a etapa 4, a gravação
-da auditoria vai por mensagem (RabbitMQ), e o evento espera na fila se o `audit-service` cair.
-
-**Em desenvolvimento:** processamento em lote (Spring Batch) — o restante do escopo
-da disciplina de microsserviços, descrito em
-[Evolução](#evolução).
+da auditoria vai por mensagem (RabbitMQ), e o evento espera na fila se o `audit-service` cair, e
+um projeto pode importar rotas em lote a partir de um CSV, com Spring Batch
+(`POST /projects/{projectId}/routes/import`).
 
 **Limitações conhecidas:** o `TokenValidationHandler` é um stub documentado que sempre concede
 (depende de um 2º fator de autenticação), e a validação da ApiKey não confere o dono do projeto nem

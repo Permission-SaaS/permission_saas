@@ -631,6 +631,226 @@
       ]
     },
     {
+      "name": "Importacao de rotas (Spring Batch)",
+      "description": "Importa rotas em lote a partir de docs/postman/rotas-exemplo.csv (16 linhas: 12 validas e 4 que o processor descarta: metodo HTTP invalido, linha sem path, rota repetida no arquivo e GET /users, que o 'Fluxo completo' ja cadastrou).\n\nPre-requisito: rodar antes a pasta 'Fluxo completo', que cria o projeto. Rode esta pasta uma vez por projeto: na segunda vez todas as rotas ja existem.\n\nArquivo: no Postman, se o campo 'file' aparecer sem arquivo, selecione docs/postman/rotas-exemplo.csv. No newman, use --working-dir docs/postman.\n\nDepois, a execucao fica registrada nas tabelas do Spring Batch: docker compose exec postgres psql -U saas -d permissions_saas -c \"select * from batch_step_execution\"",
+      "item": [
+        {
+          "name": "1. 200 — importar o CSV de exemplo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('job concluido', () => pm.expect(r.status).to.eql('COMPLETED'));",
+                  "pm.test('16 lidas, 12 importadas, 4 descartadas', () => {",
+                  "    pm.expect(r.read).to.eql(16);",
+                  "    pm.expect(r.imported).to.eql(12);",
+                  "    pm.expect(r.discarded).to.eql(4);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "rotas-exemplo.csv"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/routes/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "{{projectId}}",
+                "routes",
+                "import"
+              ]
+            },
+            "description": "O job le as 16 linhas em lotes de 10, o processor normaliza (metodo em maiusculas, barra no comeco do path, sem barra no fim) e descarta 4; o writer grava as 12 restantes."
+          }
+        },
+        {
+          "name": "2. 200 — importar de novo nao duplica",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('nenhuma rota nova', () => {",
+                  "    pm.expect(pm.response.json().imported).to.eql(0);",
+                  "    pm.expect(pm.response.json().discarded).to.eql(16);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "rotas-exemplo.csv"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/routes/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "{{projectId}}",
+                "routes",
+                "import"
+              ]
+            },
+            "description": "Mesmo arquivo, mesmo projeto: todas as rotas ja existem, entao o processor descarta as 16 e nada e gravado."
+          }
+        },
+        {
+          "name": "3. Rotas do projeto depois da importacao",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const routes = pm.response.json();",
+                  "pm.test('GET /users do Fluxo completo + 12 importadas', () => pm.expect(routes).to.have.lengthOf(13));",
+                  "pm.test('linhas normalizadas', () => {",
+                  "    const keys = routes.map(r => r.httpMethod + ' ' + r.path);",
+                  "    pm.expect(keys).to.include('POST /orders');",
+                  "    pm.expect(keys).to.include('GET /orders/{id}');",
+                  "    pm.expect(keys).to.include('PUT /orders/{id}');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/routes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "{{projectId}}",
+                "routes"
+              ]
+            },
+            "description": "No CSV, 'post', 'orders/{id}' e ' /orders/{id}/ ' chegam como POST, /orders/{id} e /orders/{id}."
+          }
+        },
+        {
+          "name": "4. 400 — sem o arquivo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('cita o campo file', () => pm.expect(pm.response.json().message).to.include('file'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "outro",
+                  "type": "text",
+                  "value": "sem arquivo"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/routes/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "{{projectId}}",
+                "routes",
+                "import"
+              ]
+            },
+            "description": "O campo file e obrigatorio (RouteImportRequest, @NotNull)."
+          }
+        },
+        {
+          "name": "5. 404 — projeto inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "rotas-exemplo.csv"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/99999999-9999-9999-9999-999999999999/routes/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "99999999-9999-9999-9999-999999999999",
+                "routes",
+                "import"
+              ]
+            },
+            "description": "O projeto e conferido antes de disparar o job."
+          }
+        }
+      ]
+    },
+    {
       "name": "Role x Route (concessao e historico)",
       "item": [
         {

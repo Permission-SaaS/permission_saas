@@ -133,6 +133,30 @@ na fila `audit.events`, e o `audit-service` consome e grava (ADR-013; o formato 
   as mensagens esperando na fila e religue com `docker compose start audit-service`. A pasta
   `audit-service fora do ar` do Postman faz o roteiro com asserções.
 
+## Importação de rotas em lote (Spring Batch)
+
+`POST /projects/{projectId}/routes/import` recebe um CSV (`name,httpMethod,path,description`) e
+dispara o job `importRoutesJob`, que lê em lotes de 10, normaliza ou descarta cada linha e grava as
+rotas (ADR-014; regras em [`API.md`](API.md)). Use o `projectId` de um projeto existente, por exemplo o
+criado pela pasta `Fluxo completo` do Postman:
+
+```bash
+curl -F "file=@docs/postman/rotas-exemplo.csv" http://localhost:8080/projects/<projectId>/routes/import
+# {"executionId":1,"status":"COMPLETED","read":16,"imported":12,"discarded":4}
+```
+
+- **Histórico das execuções:** cada execução fica nas tabelas do Spring Batch, criadas pela migration
+  `V11`. Para ver os contadores de cada uma:
+  ```bash
+  docker compose exec postgres psql -U saas -d permissions_saas -c \
+    "select job_execution_id, status, read_count, filter_count, write_count, read_skip_count, commit_count from batch_step_execution"
+  ```
+  O `commit_count` mostra os lotes: 2 para o arquivo de exemplo (10 linhas e depois 6).
+- **Logs:** `docker compose logs permission-service | grep "Route import"` mostra cada lote gravado e
+  cada linha descartada, com o motivo.
+- **Postman:** a pasta `Importacao de rotas (Spring Batch)`, logo depois do `Fluxo completo`. No newman,
+  rode com `--working-dir docs/postman` para ele achar o CSV.
+
 ## Rodar na máquina (profile `dev`)
 
 Só a infraestrutura no Docker (os bancos e o RabbitMQ); as aplicações na IDE ou no terminal, cada
