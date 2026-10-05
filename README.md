@@ -89,10 +89,10 @@ Não tem tabela própria — pergunta aos outros módulos.
 
 **`audit` — o que aconteceu.** Registra cada validação de permissão em uma trilha
 append-only. Nasce de um evento publicado pelo `permission` e não devolve nada a
-ninguém. Desde 30/09/2026 não guarda nada localmente: envia cada evento e repassa cada
-consulta ao `audit-service` (porta 8081, banco próprio) via OpenFeign — se o serviço
-cair, a validação de permissão segue funcionando e o evento se perde, com um aviso no
-log, e a consulta responde `503`.
+ninguém. Desde 30/09/2026 não guarda nada localmente: publica cada evento na fila
+`audit.events` do RabbitMQ, consumida pelo `audit-service` (porta 8081, banco próprio), e
+repassa cada consulta a ele via OpenFeign. Se o serviço cair, a validação de permissão
+segue funcionando, o evento espera na fila até ele voltar, e a consulta responde `503`.
 
 **`shared` — o que é de todos.** Configuração de segurança e Swagger, `Mapper<I,O>`,
 `DomainException` e o `GlobalExceptionHandler` que centraliza o tratamento de erro.
