@@ -334,6 +334,51 @@ serviços de uma vez, e uma mudança vale depois de reiniciar o serviço, sem im
 desenvolvimento ficou de fora de propósito, para não exigir o Config Server na máquina (ADR-012), e
 segredos não vão para lá, porque ele entrega a configuração em texto puro.
 
+### Etapa 4 — comunicação assíncrona e processamento em lote
+
+**Qual operação foi escolhida para comunicação assíncrona?** A gravação da trilha de auditoria. A
+cada `POST /validate-permission`, a aplicação principal publica a validação na fila `audit.events` do
+RabbitMQ, e o `audit-service` consome e grava.
+
+**Por que essa operação não precisa necessariamente ser concluída durante a requisição original?**
+Porque a auditoria não decide nada. Quem chamou a API precisa saber se o acesso foi permitido ou
+negado, e essa resposta não depende de a validação já estar registrada. A auditoria é um subprocesso
+independente: precisa acontecer, mas não antes da resposta. Por isso a validação responde sem esperar,
+mesmo com o `audit-service` fora do ar.
+
+**O que acontece com a mensagem caso o consumidor esteja temporariamente indisponível?** Ela fica na
+fila `audit.events`, no estado *Ready* (pronta, esperando entrega). Quando o `audit-service` volta, o
+broker entrega o que esperava e ele grava tudo. Na etapa 2, com a gravação por HTTP, esse evento se
+perdia. A fila é durável e as mensagens são persistentes, então sobrevivem até a um restart do broker.
+Uma mensagem que não pode ser gravada (tipo desconhecido, dados inválidos) é tentada 3 vezes e vai para
+a fila `audit.events.dlq`, em vez de travar as outras.
+
+**Qual funcionalidade foi escolhida para processamento em lote?** A importação das rotas de um projeto
+a partir de um CSV (`POST /projects/{projectId}/routes/import`).
+
+**Por que essa funcionalidade é adequada para Batch?** Um cliente com muitas rotas levaria muito tempo
+cadastrando uma a uma. Se ele exporta as rotas do projeto dele para um CSV, o Batch importa todas de uma
+vez: lê o arquivo linha a linha, normaliza e descarta o que não serve, e grava em lotes de 10, cada lote
+numa transação. No fim, há um resumo (no arquivo de exemplo, 16 lidas, 12 importadas e 4 descartadas) e
+o registro da execução nas tabelas do Spring Batch. É um conjunto de dados conhecido de antemão,
+processado do começo ao fim: o caso típico de lote.
+
+**Qual a diferença entre a mensageria e o Batch?** A mensageria é comunicação assíncrona entre
+componentes: um evento por vez, enviado quando acontece, para outro serviço tratar quando puder. O
+Batch é processamento estruturado sobre um conjunto de dados: a coleção inteira, lida e gravada em
+pedaços controlados, com início, fim e resumo. A fila liga dois serviços; o Batch roda dentro de um.
+
+**Em quais situações da aplicação seria mais adequado utilizar REST, mensageria ou Batch?**
+
+- **REST** quando quem chama precisa da resposta na hora para seguir: a validação de permissão
+  (`POST /validate-permission`), que diz se o acesso passa, e a consulta da trilha (`GET /audit-events`).
+- **Mensageria** quando uma parte do sistema pode ser desacoplada e feita depois, por outro serviço: a
+  gravação da auditoria. Pelo mesmo motivo, serviria para avisar o cliente por e-mail quando a
+  assinatura vencer, sem segurar a requisição que originou o aviso.
+- **Batch** para importar ou migrar dados em volume, lendo arquivos grandes: a importação de rotas, e a
+  migração dos eventos antigos de auditoria para o `audit_db`, que o ADR-010 aponta como o caminho num
+  sistema em produção.
+
 ---
 
 ## Padrões de projeto
@@ -388,7 +433,7 @@ distinguir o que já existia do que foi construído em cada momento.
 | ---------------------------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
 | [Clean Code e Padrões de Projeto](docs/clean_code_e_padroes_de_projeto/PLAN.md)                                        | até 05/07/2026 | Módulos`shared`, `identity`, `billing` e `permission`; Factory Method, Adapter e Chain of Responsibility; fronteiras de módulo com Spring Modulith | —                                               |
 | [Desenvolvimento de aplicações Java com Spring Boot](docs/desenvolvimento_de_aplicacoes_java_com_spring_boot/PLAN.md) | até 31/08/2026 | Módulos `project` e `audit`, CRUD REST completo, relacionamentos e herança JPA, leitura de arquivos texto | tags `etapa-1` … `etapa-4` |
-| [Arquiteturas avançadas de software com microsserviços e Spring Framework](docs/arquiteturas_avancadas_de_software_com_microsservicos_e_spring_framework/PLAN.md) | até 05/10/2026 | `audit` extraído como serviço independente, OpenFeign, Config Server, banco por serviço, RabbitMQ e Spring Batch | tags `arq-etapa-1` … `arq-etapa-4` (em construção) |
+| [Arquiteturas avançadas de software com microsserviços e Spring Framework](docs/arquiteturas_avancadas_de_software_com_microsservicos_e_spring_framework/PLAN.md) | até 05/10/2026 | `audit` extraído como serviço independente, OpenFeign, Config Server, banco por serviço, RabbitMQ e Spring Batch | tags `arq-etapa-1` … `arq-etapa-4` |
 
 As tags desta disciplina usam o prefixo `arq-` porque `etapa-1` … `etapa-4` já
 apontam para a evidência da disciplina anterior e não podem ser movidas.
@@ -415,6 +460,32 @@ descrevendo o sistema como ele está hoje:
 
 O que é específico de uma disciplina — enunciado e planejamento — fica na pasta dela,
 listada em [Evolução](#evolução).
+
+---
+
+## Uso de IA
+
+A disciplina incentiva o uso de IA, desde que citado. Usei o **Claude Code**, da Anthropic (modelos da
+família Claude Opus), no terminal e no VS Code, como um par de programação. Ele me ajudou a tirar
+dúvidas, a ver um exemplo antes de implementar algo que eu ainda não conhecia e a assumir as tarefas
+mecânicas, enquanto eu me concentrava na arquitetura e no domínio do projeto.
+
+| Parte | Como foi feito |
+| ----- | -------------- |
+| Arquitetura e decisões | As decisões foram minhas, discutidas com a IA: qual funcionalidade extrair (o `audit`), RabbitMQ como broker, o envelope genérico da mensagem, os nomes das tags e os cortes de escopo. A IA ajudou a confrontar o plano com a rubrica e registrou as decisões no `PLAN.md` e nos ADRs |
+| Extração do `audit-service` | Delegada por ser mecânica: copiar o módulo, ajustar pacotes e imports. A IA executou e eu revisei |
+| OpenFeign | Feito em conjunto: escrevi partes da integração e deixei com a IA os detalhes repetitivos |
+| Dockerfiles e Compose | Eu já tinha um `Dockerfile` como base e deleguei a adaptação e o Compose, para me concentrar na arquitetura e no domínio. A IA explicou cada linha depois |
+| Profiles e Config Server | Eu nunca tinha usado o Config Server. Li a documentação, tirei as dúvidas com a IA e, como a implementação é simples depois de entendida, pedi que ela a fizesse |
+| RabbitMQ | A IA implementou o produtor e o consumidor. Acompanhei o fluxo no painel do RabbitMQ (conexões, fila e consumidor) até entender o papel de cada peça: produtor, broker, fila e consumidor |
+| Spring Batch | Eu sabia como fazer uma importação em massa, porque já tinha feito em PHP, mas não conhecia o Spring Batch. A IA implementou o job e me explicou cada componente: reader, processor, writer, chunk e job |
+| Reflexões arquiteturais | As respostas são minhas. A IA redigiu o texto a partir delas, e eu revisei |
+| Testes e documentação | Testei o fluxo completo pela coleção do Postman. A IA rodou a coleção inteira (newman) contra a solução em containers, incluindo as quedas de serviço, e redigiu o README, os ADRs, o `API.md` e o `RUNNING.md` |
+
+Revisei cada mudança antes do commit e levei à IA toda dúvida que tive, até entendê-la. Algumas
+correções partiram dessa revisão, como tirar a validação do upload do controller (`RouteImportRequest`)
+e enxugar este README. Como os resultados da IA podem ter erros, cada mudança também passou por build,
+testes automatizados e pela coleção do Postman antes do commit.
 
 ---
 
