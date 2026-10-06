@@ -403,7 +403,7 @@ pedaços controlados, com início, fim e resumo. A fila liga dois serviços; o B
 
 Onde cada padrão vive, por que foi escolhido e como estender:
 [`PATTERNS.md` da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/PATTERNS.md). Mapeamento dos 5 princípios SOLID:
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+[`ARCHITECTURE.md` da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/ARCHITECTURE.md#princípios-solid).
 
 ---
 
