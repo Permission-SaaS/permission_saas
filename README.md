@@ -513,3 +513,11 @@ testes automatizados e pela coleção do Postman antes do commit.
 ## Autor
 
 Jairo Williams Guedes Lopes Neto
+
+---
+
+## Licença
+
+Todos os direitos reservados a Jairo Williams Guedes Lopes Neto. O código é público só para consulta
+e avaliação; ver [`LICENSE`](LICENSE). Vale para todos os repositórios da organização, cada um com o
+seu `LICENSE`.
