@@ -263,9 +263,12 @@ fotografia do sistema inteiro.
 
 **Trazer o `main` mais recente de todos:** `git submodule update --remote --merge`.
 
-**Acrescentar um repositório novo**, por exemplo o front-end (o repositório precisa ter ao menos um
-commit):
+**Acrescentar um repositório novo** à organização (ele precisa ter ao menos um commit):
 
 ```bash
-git submodule add -b main https://github.com/Permission-SaaS/permission_saas_front.git permission_saas_front
+git submodule add -b main https://github.com/Permission-SaaS/<repo>.git <repo>
+git -C <repo> remote set-url --push origin git@github.com:Permission-SaaS/<repo>.git
 ```
+
+Depois, registre o repositório no `docs/ARCHITECTURE.md` e, se ele tiver um container, no
+`docker-compose.yml`.

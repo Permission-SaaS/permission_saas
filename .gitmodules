@@ -10,3 +10,7 @@
 	path = permission_saas_config
 	url = https://github.com/Permission-SaaS/permission_saas_config.git
 	branch = main
+[submodule "permission_saas_front"]
+	path = permission_saas_front
+	url = https://github.com/Permission-SaaS/permission_saas_front.git
+	branch = main
