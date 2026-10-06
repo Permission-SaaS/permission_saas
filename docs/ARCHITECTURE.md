@@ -320,7 +320,8 @@ Dois índices são parciais, cobrindo exatamente os filtros que os use cases apl
 
 **Status:** aceito na etapa 1 da disciplina de microsserviços; **revisado na etapa 2 (28/09/2026)**
 — a aplicação principal saiu da raiz para `permission-service/`. A versão original e o motivo da revisão estão no
-fim deste ADR.
+fim deste ADR. **Substituído pelo ADR-015 em 05/10/2026:** cada aplicação passou a ter
+repositório próprio.
 
 **Contexto:** a disciplina exige extrair o `audit` para uma aplicação Spring Boot independente e,
 depois, acrescentar um Config Server. Passam a existir três `pom.xml` onde havia um. O caminho
@@ -695,3 +696,72 @@ conhecido de antemão, processado do começo ao fim, com um resumo no final.
 - Sem teste automatizado próprio. O teste de contexto (`PermissionSaasApplicationTests`) garante que o
   job monta, com as tabelas do Batch criadas no H2. O comportamento foi verificado pela pasta
   `Importacao de rotas (Spring Batch)` do Postman.
+
+---
+
+## ADR-015: um repositório por aplicação, com este como guarda-chuva
+
+**Status:** aceito em 05/10/2026, entre uma disciplina e outra: é manutenção do projeto, fora do escopo
+de qualquer disciplina. Substitui o ADR-008.
+
+**Contexto:** o ADR-008 manteve as três aplicações como pastas irmãs de um único repositório. Ele
+descartou um repositório por serviço porque isso espalharia as tags `etapa-*` e `arq-etapa-*`, a
+evidência das disciplinas, por repositórios diferentes. Depois da entrega da disciplina de
+microsserviços, duas coisas mudaram:
+
+- o projeto vai ganhar um front-end, com outra linguagem e outro ciclo de build. Dentro de um
+  repositório Java, ele misturaria ferramentas e históricos sem ganho nenhum;
+- o autor criou a organização Permission-SaaS no GitHub para reunir os repositórios do produto, e quer
+  cada aplicação versionada e publicada por conta própria. Isso vale também para o `audit-service`, que
+  tem a direção futura de virar um serviço de auditoria genérico, usado por outros projetos.
+
+**Decisão:**
+
+- **Um repositório por aplicação** na organização: `permission_saas_api` (`permission-service`),
+  `permission_saas_audit` (`audit-service`), `permission_saas_config` (`config-server`) e, quando
+  existir, `permission_saas_front`. Cada um foi extraído com o histórico da sua pasta
+  (`git filter-repo`). O do `permission_saas_api` inclui o período em que a aplicação ficava na raiz,
+  antes de 28/09/2026.
+- **Este repositório vira o guarda-chuva** e é transferido para a organização, com o mesmo nome. Ele
+  guarda o histórico completo e **todas as tags**, que continuam apontando para os mesmos commits. Os
+  repositórios extraídos não levam as tags `etapa-*` nem `arq-etapa-*`, para não haver duas versões da
+  mesma evidência. O GitHub redireciona o endereço antigo (`JairoNetoDev/permission_saas`), que está
+  nos documentos de entrega.
+- **Submódulos Git** ligam o guarda-chuva às aplicações. Cada commit daqui fixa o commit de cada
+  aplicação, então uma tag aqui é a fotografia do sistema inteiro, que é o formato das entregas das
+  próximas disciplinas. As URLs do `.gitmodules` são HTTPS, para qualquer pessoa clonar sem chave SSH.
+- **O `config-repo/` fica no guarda-chuva**, ao lado do `docker-compose.yml`, e não no repositório do
+  Config Server. Os dois descrevem a mesma topologia: os nomes `postgres`, `rabbitmq` e `audit-service`
+  dos arquivos são os serviços do Compose, e renomear um deles continua sendo um commit só. O padrão
+  `file:../config-repo` do Config Server segue valendo, porque a pasta dele fica ao lado do
+  `config-repo/`.
+- **Os nomes internos não mudam.** `spring.application.name`, os serviços do Compose, os arquivos do
+  `config-repo/`, o cliente Feign `audit-service` e o `source` da mensagem continuam
+  `permission-service`, `audit-service` e `config-server`. Só mudam os nomes de repositório e de pasta.
+  Renomear as aplicações tocaria configuração, DNS do Compose e dados já gravados, sem ganho.
+- **A documentação acompanha o código.** Cada repositório documenta o próprio interior: o
+  `permission_saas_api` tem `ARCHITECTURE.md` (módulos e camadas), `DOMAIN.md`, `API.md`, `PATTERNS.md`
+  e `TEST-ARCHITECTURE.md`; o `permission_saas_audit`, `ARCHITECTURE.md`, `DOMAIN.md` e `API.md`. Aqui
+  ficam a visão do sistema, este log de ADRs com a numeração única, o `RUNNING.md`, a coleção Postman,
+  o DER e as pastas das disciplinas.
+
+**Alternativa descartada: pastas ignoradas e um script de clone.** Cada aplicação seria um clone comum
+dentro desta pasta, ignorado pelo `.gitignore`, e um script clonaria todos. É mais simples no dia a dia,
+mas nenhuma versão fica registrada: reproduzir uma entrega exigiria a mesma tag em cada repositório.
+
+**Consequências:**
+
+- **Clonar exige `--recurse-submodules`**, ou `git submodule update --init` depois. Sem isso, as pastas
+  das aplicações vêm vazias.
+- **Uma mudança passa a ter dois commits:** o do repositório da aplicação e, quando o conjunto deve
+  ficar registrado, o que atualiza o ponteiro aqui. `push.recurseSubmodules=check` impede publicar um
+  ponteiro para um commit que ainda não está no GitHub. O fluxo está no `RUNNING.md`.
+- **HEAD destacado:** depois de um `git submodule update`, o submódulo fica parado num commit, fora de
+  qualquer branch. É preciso `git switch main` antes de commitar nele.
+- **Uma mudança de contrato**, como um campo novo na mensagem da fila, vira um commit em cada
+  aplicação e um ponteiro atualizado aqui. Como no ADR-008, a duplicação dos contratos continua
+  consciente: não há biblioteca compartilhada.
+- **O motivo do ADR-008 para descartar esta opção deixou de valer:** as tags continuam todas aqui,
+  intactas, e as entregas futuras ganham tag neste repositório, que fixa todas as aplicações de uma vez.
+- O `docs/DER.pdf` fica aqui porque desenha o modelo do sistema inteiro, de antes da separação dos
+  bancos.
