@@ -54,7 +54,7 @@ services:
 
   config-server:
     build:
-      context: ./config-server
+      context: ./permission_saas_config
       dockerfile: Dockerfile
     environment:
       CONFIG_REPO_LOCATION: file:/config-repo
@@ -71,7 +71,7 @@ services:
 
   audit-service:
     build:
-      context: ./audit-service
+      context: ./permission_saas_audit
       dockerfile: Dockerfile
     depends_on:
       config-server:
@@ -102,13 +102,13 @@ services:
     develop:
       watch:
         - action: rebuild
-          path: ./audit-service/src
+          path: ./permission_saas_audit/src
         - action: rebuild
-          path: ./audit-service/pom.xml
+          path: ./permission_saas_audit/pom.xml
 
   permission-service:
     build:
-      context: ./permission-service
+      context: ./permission_saas_api
       dockerfile: Dockerfile
     depends_on:
       config-server:
@@ -142,9 +142,9 @@ services:
     develop:
       watch:
         - action: rebuild
-          path: ./permission-service/src
+          path: ./permission_saas_api/src
         - action: rebuild
-          path: ./permission-service/pom.xml
+          path: ./permission_saas_api/pom.xml
         - action: rebuild
           path: ./.env
 

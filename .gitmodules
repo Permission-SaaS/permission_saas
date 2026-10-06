@@ -1,0 +1,12 @@
+[submodule "permission_saas_api"]
+	path = permission_saas_api
+	url = https://github.com/Permission-SaaS/permission_saas_api.git
+	branch = main
+[submodule "permission_saas_audit"]
+	path = permission_saas_audit
+	url = https://github.com/Permission-SaaS/permission_saas_audit.git
+	branch = main
+[submodule "permission_saas_config"]
+	path = permission_saas_config
+	url = https://github.com/Permission-SaaS/permission_saas_config.git
+	branch = main
