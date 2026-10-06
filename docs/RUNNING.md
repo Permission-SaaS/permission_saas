@@ -11,9 +11,19 @@ rodar fora do Docker, depurar e testar. A visão geral e o comando para subir tu
 - Para rodar fora do Docker: JDK 21. O Maven Wrapper (`./mvnw`) já está em cada projeto e baixa a
   versão certa do Maven sozinho.
 
-Cada aplicação é um projeto Maven independente, com seu próprio `pom.xml`, `mvnw` e `Dockerfile`:
-os comandos `./mvnw` rodam **dentro** da pasta do projeto (ADR-008 em
-[`ARCHITECTURE.md`](ARCHITECTURE.md)).
+Cada aplicação é um projeto Maven independente, com seu próprio `pom.xml`, `mvnw` e `Dockerfile`, no
+seu próprio repositório, incluído aqui como submódulo: os comandos `./mvnw` rodam **dentro** da pasta
+do projeto (ADR-008 e ADR-015 em [`ARCHITECTURE.md`](ARCHITECTURE.md)).
+
+## Clonar
+
+```bash
+git clone --recurse-submodules https://github.com/Permission-SaaS/permission_saas.git
+```
+
+Sem o `--recurse-submodules`, as pastas `permission_saas_*` vêm vazias; resolva com
+`git submodule update --init`. Como trabalhar dentro delas está em
+[Trabalhar com os submódulos](#trabalhar-com-os-submódulos).
 
 ## Subir tudo com o Docker Compose
 
@@ -26,9 +36,9 @@ Sobem seis containers, na rede que o Compose cria para o projeto:
 
 | Container            | Imagem                          | Porta na máquina            | Fala com                                                    |
 | -------------------- | ------------------------------- | --------------------------- | ----------------------------------------------------------- |
-| `config-server`      | `config-server/Dockerfile`      | 8888                        | — (lê `config-repo/`, montado como volume)                  |
-| `permission-service` | `permission-service/Dockerfile` | 8080                        | `config-server:8888`, `postgres:5432`, `audit-service:8081`, `rabbitmq:5672` |
-| `audit-service`      | `audit-service/Dockerfile`      | 8081                        | `config-server:8888`, `audit-postgres:5432`, `rabbitmq:5672` |
+| `config-server`      | `permission_saas_config/Dockerfile` | 8888                    | — (lê `config-repo/`, montado como volume)                  |
+| `permission-service` | `permission_saas_api/Dockerfile`    | 8080                    | `config-server:8888`, `postgres:5432`, `audit-service:8081`, `rabbitmq:5672` |
+| `audit-service`      | `permission_saas_audit/Dockerfile`  | 8081                    | `config-server:8888`, `audit-postgres:5432`, `rabbitmq:5672` |
 | `postgres`           | `postgres:16`                   | 5432 (`POSTGRES_HOST_PORT`) | —                                                           |
 | `audit-postgres`     | `postgres:16`                   | 5433                        | —                                                           |
 | `rabbitmq`           | `rabbitmq:4-management`         | 5672 · 15672 (painel)       | —                                                           |
@@ -119,8 +129,8 @@ no container como volume.
 ## Mensageria (RabbitMQ)
 
 A gravação da auditoria vai por mensagem: a aplicação principal publica cada validação de permissão
-na fila `audit.events`, e o `audit-service` consome e grava (ADR-013; o formato da mensagem está em
-[`API.md`](API.md) → "Mensageria").
+na fila `audit.events`, e o `audit-service` consome e grava (ADR-013; o formato da mensagem está no
+[`API.md` do `audit-service`](https://github.com/Permission-SaaS/permission_saas_audit/blob/main/docs/API.md#mensageria--fila-auditevents-rabbitmq)).
 
 - **Painel:** http://localhost:15672, usuário `saas`, senha `saas123`. Na aba *Queues* estão a
   `audit.events` e a `audit.events.dlq`, para onde vão as mensagens que não puderam ser gravadas.
@@ -137,7 +147,7 @@ na fila `audit.events`, e o `audit-service` consome e grava (ADR-013; o formato 
 
 `POST /projects/{projectId}/routes/import` recebe um CSV (`name,httpMethod,path,description`) e
 dispara o job `importRoutesJob`, que lê em lotes de 10, normaliza ou descarta cada linha e grava as
-rotas (ADR-014; regras em [`API.md`](API.md)). Use o `projectId` de um projeto existente, por exemplo o
+rotas (ADR-014; regras no [`API.md` da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/API.md)). Use o `projectId` de um projeto existente, por exemplo o
 criado pela pasta `Fluxo completo` do Postman:
 
 ```bash
@@ -164,8 +174,8 @@ uma no seu:
 
 ```bash
 docker compose up -d postgres audit-postgres rabbitmq
-cd permission-service && ./mvnw spring-boot:run   # 8080, banco em localhost:5432
-cd audit-service && ./mvnw spring-boot:run        # 8081, banco em localhost:5433
+cd permission_saas_api && ./mvnw spring-boot:run     # 8080, banco em localhost:5432
+cd permission_saas_audit && ./mvnw spring-boot:run   # 8081, banco em localhost:5433
 ```
 
 Nenhuma variável é necessária, e o Config Server não é usado: o profile `dev` já aponta tudo para
@@ -174,7 +184,7 @@ mecanismo que o Compose usa:
 
 ```bash
 POSTGRES_HOST_PORT=5434 docker compose up -d postgres
-cd permission-service && DB_URL=jdbc:postgresql://localhost:5434/permissions_saas ./mvnw spring-boot:run
+cd permission_saas_api && DB_URL=jdbc:postgresql://localhost:5434/permissions_saas ./mvnw spring-boot:run
 ```
 
 Ao depurar, um breakpoint parado no `audit-service` estoura o timeout de 2s do cliente Feign. Para
@@ -201,7 +211,7 @@ docker compose watch           # em outro terminal, fica observando e rebuildand
 
 ## Build e testes
 
-Em cada projeto (`permission-service/`, `audit-service/`, `config-server/`):
+Em cada projeto (`permission_saas_api/`, `permission_saas_audit/`, `permission_saas_config/`):
 
 ```bash
 ./mvnw clean package -DskipTests   # build
@@ -212,3 +222,50 @@ Em cada projeto (`permission-service/`, `audit-service/`, `config-server/`):
 
 Os testes da aplicação principal rodam no profile `test`, com H2 em memória: não precisam de banco nem
 do Config Server. Os outros dois projetos ainda não têm testes automatizados.
+
+## Trabalhar com os submódulos
+
+Cada pasta `permission_saas_*` é um repositório Git comum, com histórico, branches e `origin` próprios.
+O guarda-chuva guarda só **qual commit** de cada um compõe o sistema (o `.gitmodules` lista as URLs).
+
+Configuração recomendada, uma vez por clone do guarda-chuva:
+
+```bash
+git config submodule.recurse true          # pull e checkout também atualizam os submódulos
+git config push.recurseSubmodules check    # recusa publicar um commit de submódulo que não está no GitHub
+git config status.submoduleSummary true    # git status resume os commits novos de cada submódulo
+```
+
+**Mudar o código de uma aplicação:**
+
+```bash
+cd permission_saas_api
+git switch main            # depois de um "submodule update", o submódulo fica em HEAD destacado
+# ... editar, testar ...
+git commit -am "feat(project): ..." && git push
+```
+
+Commitar em HEAD destacado deixa o commit fora de qualquer branch, e ele se perde fácil: confira o
+branch antes (`git branch --show-current`).
+
+**Registrar no guarda-chuva a versão que funciona junto:** depois do push no submódulo,
+
+```bash
+cd ..                                     # raiz do guarda-chuva
+git add permission_saas_api
+git commit -m "chore: bump permission_saas_api"
+git push
+```
+
+Não é preciso fazer isso a cada commit do submódulo, só quando o conjunto deve ficar registrado — por
+exemplo, antes de uma tag de entrega. Uma tag no guarda-chuva fixa o commit de cada submódulo: é a
+fotografia do sistema inteiro.
+
+**Trazer o `main` mais recente de todos:** `git submodule update --remote --merge`.
+
+**Acrescentar um repositório novo**, por exemplo o front-end (o repositório precisa ter ao menos um
+commit):
+
+```bash
+git submodule add -b main https://github.com/Permission-SaaS/permission_saas_front.git permission_saas_front
+```

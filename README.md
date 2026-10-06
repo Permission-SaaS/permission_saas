@@ -10,6 +10,12 @@ construído como projeto de longo prazo ao longo da Pós-Graduação: cada disci
 este mesmo código em vez de começar um projeto do zero. O que cada uma acrescentou está em
 [Evolução](#evolução).
 
+> **Repositórios.** Desde 05/10/2026, cada aplicação tem repositório próprio na organização
+> [Permission-SaaS](https://github.com/Permission-SaaS), e este é o repositório guarda-chuva: fixa a
+> versão de cada uma como submódulo, sobe o sistema inteiro e guarda a documentação do sistema e as
+> tags (ADR-015). **As versões avaliadas continuam nas tags**, no layout de pasta única da época:
+> [`etapa-4`](https://github.com/Permission-SaaS/permission_saas/tree/etapa-4) (Spring Boot) e [`arq-etapa-4`](https://github.com/Permission-SaaS/permission_saas/tree/arq-etapa-4) (Microsserviços).
+
 **Stack:** Java 21 · Spring Boot 4.1.0 · Spring Data JPA · PostgreSQL 16 · Flyway · Spring Modulith · Spring Cloud OpenFeign · Spring Cloud Config · RabbitMQ · Spring Batch · Docker Compose · Maven
 
 ---
@@ -19,6 +25,8 @@ este mesmo código em vez de começar um projeto do zero. O que cada uma acresce
 Basta Docker com Docker Compose (v2): o build das aplicações acontece dentro das imagens.
 
 ```bash
+git clone --recurse-submodules https://github.com/Permission-SaaS/permission_saas.git
+cd permission_saas
 cp .env.example .env
 docker compose up -d --build
 ```
@@ -38,23 +46,24 @@ docker compose ps                                # os seis como "healthy"
 ```
 
 O caminho feliz completo (cliente → plano → ApiKey → projeto → validação → auditoria) está na pasta
-`Fluxo completo` da coleção do Postman em [`docs/postman/`](docs/postman/); todos os endpoints estão
-em [`docs/API.md`](docs/API.md). Profiles, variáveis de ambiente, rodar fora do Docker, debug,
+`Fluxo completo` da coleção do Postman em [`docs/postman/`](docs/postman/); os endpoints estão no
+`API.md` [da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/API.md) e [do `audit-service`](https://github.com/Permission-SaaS/permission_saas_audit/blob/main/docs/API.md). Profiles, variáveis de ambiente, rodar fora do Docker, debug,
 testes e o que fazer com a porta 5432 ocupada: [`docs/RUNNING.md`](docs/RUNNING.md).
 
 ```
-permission_saas/
-├── permission-service/  aplicação principal (monolito modular)
-├── audit-service/       trilha de auditoria extraída como serviço
-├── config-server/       configuração centralizada (Spring Cloud Config)
-├── config-repo/         os arquivos de configuração que o config-server serve
-├── docker-compose.yml   orquestra as aplicações e os bancos
-├── docker/              script de inicialização do Postgres da aplicação principal
-└── docs/                documentação do projeto e de cada disciplina
+permission_saas/                guarda-chuva (este repositório)
+├── permission_saas_api/        submódulo: aplicação principal (monolito modular)
+├── permission_saas_audit/      submódulo: trilha de auditoria extraída como serviço
+├── permission_saas_config/     submódulo: configuração centralizada (Spring Cloud Config)
+├── config-repo/                os arquivos de configuração que o config-server serve
+├── docker-compose.yml          orquestra as aplicações e os bancos
+├── docker/                     script de inicialização do Postgres da aplicação principal
+└── docs/                       documentação do sistema e de cada disciplina
 ```
 
-Cada aplicação é um projeto Maven independente, com seu próprio `pom.xml`, `mvnw` e `Dockerfile`
-(ADR-008 em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)).
+Cada aplicação é um projeto Maven independente, com seu próprio `pom.xml`, `mvnw` e `Dockerfile`, no
+seu repositório: [`permission_saas_api`](https://github.com/Permission-SaaS/permission_saas_api), [`permission_saas_audit`](https://github.com/Permission-SaaS/permission_saas_audit) e
+[`permission_saas_config`](https://github.com/Permission-SaaS/permission_saas_config) (ADR-008 e ADR-015 em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)).
 
 ---
 
@@ -63,8 +72,9 @@ Cada aplicação é um projeto Maven independente, com seu próprio `pom.xml`, `
 A aplicação principal é um monolito modular: um deploy só, organizado por módulo de domínio,
 cada um com `domain` / `application` / `infrastructure` / `api`. Os módulos só conversam por use
 cases ou eventos, nunca pelo repositório de outro módulo. Essa fronteira é verificada pelo Spring
-Modulith: `./mvnw test` (em `permission-service/`) falha se alguém importar um pacote interno de
-outro módulo. Camadas, regras de comunicação e ADRs: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Modulith: `./mvnw test` (em `permission_saas_api/`) falha se alguém importar um pacote interno de
+outro módulo. Camadas e regras de comunicação: o [`ARCHITECTURE.md` da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/ARCHITECTURE.md);
+visão do sistema e ADRs: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ### Módulos e responsabilidades
 
@@ -182,7 +192,7 @@ A extração da etapa 2. O porquê da escolha está em
 
 |                                         |                                                                                                                                                                                                                                                                                                                       |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Nome**                                | `audit-service` — pasta `audit-service/`, porta 8081, banco próprio `audit_db` (porta 5433)                                                                                                                                                                                                                           |
+| **Nome**                                | `audit-service` — repositório [`permission_saas_audit`](https://github.com/Permission-SaaS/permission_saas_audit), porta 8081, banco próprio `audit_db` (porta 5433)                                                                                                                                                                                                                           |
 | **Responsabilidade principal**          | Guardar a trilha de auditoria das validações de permissão e permitir consultá-la por tipo, projeto, período e resultado                                                                                                                                                                                              |
 | **O que saiu da aplicação principal**   | A persistência da trilha: entidades JPA com herança `SINGLE_TABLE`, repositórios, consultas JPQL, o arquivo `logs/audit-events.txt` e a tabela `audit_events`, apagada pela migration `V10`. O módulo `audit` do monolito ficou só como cliente do serviço                                                       |
 | **Motivo**                              | Nenhum módulo depende da auditoria para decidir algo: o `permission` avisa o que aconteceu e não espera resposta. Os dados não têm chave estrangeira para outras tabelas e crescem a cada validação, num ritmo próprio. E auditoria serve a qualquer sistema, não só a este — ver a [reflexão](#etapa-2--separação-do-audit-service) |
@@ -190,7 +200,7 @@ A extração da etapa 2. O porquê da escolha está em
 **API REST.** `POST /audit-events/permission-checks` registra uma validação (`201`/`400`) e
 `GET /audit-events` consulta a trilha com filtros opcionais (`200`/`400`). O contrato são DTOs
 próprios nos dois lados; nenhuma entidade JPA atravessa a rede. Swagger em
-`http://localhost:8081/swagger-ui/index.html`; detalhes em [`docs/API.md`](docs/API.md).
+`http://localhost:8081/swagger-ui/index.html`; detalhes no [`API.md` do serviço](https://github.com/Permission-SaaS/permission_saas_audit/blob/main/docs/API.md).
 
 **Comunicação.** Cada operação usa o estilo que combina com ela. A **consulta** é REST: a
 aplicação principal chama o serviço pelo cliente OpenFeign `AuditClient`, atrás da porta
@@ -392,7 +402,7 @@ pedaços controlados, com início, fim e resumo. A fila liga dois serviços; o B
 | Builder                 | `ProjectBuilder` — descartado: `@Builder` do Lombok mais `addRole`/`addRoute` já cobrem o caso | ⛔     |
 
 Onde cada padrão vive, por que foi escolhido e como estender:
-[`docs/PATTERNS.md`](docs/PATTERNS.md). Mapeamento dos 5 princípios SOLID:
+[`PATTERNS.md` da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/PATTERNS.md). Mapeamento dos 5 princípios SOLID:
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ---
@@ -413,13 +423,13 @@ um projeto pode importar rotas em lote a partir de um CSV, com Spring Batch
 **Limitações conhecidas:** o `TokenValidationHandler` é um stub documentado que sempre concede
 (depende de um 2º fator de autenticação), e a validação da ApiKey não confere o dono do projeto nem
 evita comparar a chave por bcrypt com todas as chaves ativas
-([`docs/DOMAIN.md`](docs/DOMAIN.md) → "Limitações conhecidas").
+([`DOMAIN.md` da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/DOMAIN.md) → "Limitações conhecidas").
 
 **Trabalho futuro:** gateway de pagamento real, autenticação/JWT com Spring Security,
 exportação CSV/JSON, front-end, `userId` no evento de auditoria, uma aplicação
 cliente de demonstração consumindo o `POST /validate-permission` e a renomeação desse
 endpoint para `POST /permissions/validate`, que alinharia o recurso ao restante da API
-(ver a nota de contrato em [`docs/API.md`](docs/API.md)).
+(ver a nota de contrato no [`API.md` da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/API.md)).
 
 ---
 
@@ -438,6 +448,10 @@ distinguir o que já existia do que foi construído em cada momento.
 As tags desta disciplina usam o prefixo `arq-` porque `etapa-1` … `etapa-4` já
 apontam para a evidência da disciplina anterior e não podem ser movidas.
 
+Em 05/10/2026, entre uma disciplina e outra, cada aplicação ganhou repositório próprio (ADR-015).
+Todas as tags acima ficam neste repositório e continuam apontando para o código como ele foi
+entregue.
+
 O relatório escrito da primeira disciplina foi entregue como PDF no Moodle e não está
 versionado aqui.
 
@@ -445,18 +459,23 @@ versionado aqui.
 
 ## Documentação
 
-A raiz de `docs/` guarda a documentação **do projeto como um todo** — cumulativa,
-descrevendo o sistema como ele está hoje:
+A raiz de `docs/` guarda a documentação **do sistema como um todo** — cumulativa, descrevendo o
+sistema como ele está hoje:
 
-| Arquivo                                                   | Conteúdo                                                                              |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [`docs/RUNNING.md`](docs/RUNNING.md)                     | Como subir, configurar (profiles, variáveis, Config Server), depurar e testar          |
-| [`docs/API.md`](docs/API.md)                             | Todos os endpoints REST implementados, com request/response e exemplos de curl         |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)           | Módulos, camadas, regras de comunicação, ADRs                                       |
-| [`docs/DOMAIN.md`](docs/DOMAIN.md)                       | Glossário de entidades, value objects e invariantes de negócio                       |
-| [`docs/PATTERNS.md`](docs/PATTERNS.md)                   | Cada padrão GoF: onde vive, por quê, como estender                                   |
-| [`docs/TEST-ARCHITECTURE.md`](docs/TEST-ARCHITECTURE.md) | Convenções de teste (unit/slice/integration), exemplos e pirâmide de testes adotada |
-| [`docs/DER.pdf`](docs/DER.pdf)                           | Diagrama entidade-relacionamento                                                       |
+| Arquivo                                        | Conteúdo                                                                          |
+| ---------------------------------------------- | --------------------------------------------------------------------------------- |
+| [`docs/RUNNING.md`](docs/RUNNING.md)           | Como clonar, subir, configurar (profiles, variáveis, Config Server), depurar e testar |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Os repositórios, como os serviços conversam e o log de decisões (ADRs)            |
+| [`docs/DER.pdf`](docs/DER.pdf)                 | Diagrama entidade-relacionamento                                                  |
+| [`docs/postman/`](docs/postman/)               | Coleção Postman com todos os endpoints dos três serviços                          |
+
+Cada aplicação documenta o próprio interior no seu repositório:
+
+| Repositório                              | Documentação                                                                                                      |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| [`permission_saas_api`](https://github.com/Permission-SaaS/permission_saas_api)       | `ARCHITECTURE.md` (módulos e camadas), `DOMAIN.md`, `API.md`, `PATTERNS.md` e `TEST-ARCHITECTURE.md`, em `docs/` |
+| [`permission_saas_audit`](https://github.com/Permission-SaaS/permission_saas_audit)     | `ARCHITECTURE.md`, `DOMAIN.md` e `API.md` (endpoints e contrato da fila), em `docs/`                              |
+| [`permission_saas_config`](https://github.com/Permission-SaaS/permission_saas_config)    | `README.md`                                                                                                       |
 
 O que é específico de uma disciplina — enunciado e planejamento — fica na pasta dela,
 listada em [Evolução](#evolução).
