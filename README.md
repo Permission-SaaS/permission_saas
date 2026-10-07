@@ -46,7 +46,7 @@ docker compose ps                                # os seis como "healthy"
 ```
 
 O caminho feliz completo (cliente → plano → ApiKey → projeto → validação → auditoria) está na pasta
-`Fluxo completo` da coleção do Postman em [`docs/postman/`](docs/postman/); os endpoints estão no
+`1. Fluxo completo` da coleção do Postman em [`docs/postman/`](docs/postman/); os endpoints estão no
 `API.md` [da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/API.md) e [do `audit-service`](https://github.com/Permission-SaaS/permission_saas_audit/blob/main/docs/API.md). Profiles, variáveis de ambiente, rodar fora do Docker, debug,
 testes e o que fazer com a porta 5432 ocupada: [`docs/RUNNING.md`](docs/RUNNING.md).
 
@@ -239,9 +239,9 @@ permission-service (8080)
 
 | Demonstração                         | Pasta do Postman                                     |
 | ------------------------------------ | ---------------------------------------------------- |
-| API do serviço isolada               | `audit-service (8081)`                               |
-| Operação pela aplicação principal    | `Fluxo completo` (requisições 9 a 14) e `Audit`      |
-| Serviço indisponível                 | `audit-service fora do ar` — o roteiro está na descrição da pasta |
+| API do serviço isolada               | `3. permission_saas_audit (8081)`                    |
+| Operação pela aplicação principal    | `1. Fluxo completo` (requisições 9 a 14) e `2. permission_saas_api (8080)` → `audit` |
+| Serviço indisponível                 | `5. RabbitMQ` → `Consumidor fora do ar (manual)` — o roteiro está na descrição da pasta |
 
 ---
 
@@ -468,7 +468,7 @@ sistema como ele está hoje:
 | [`docs/RUNNING.md`](docs/RUNNING.md)           | Como clonar, subir, configurar (profiles, variáveis, Config Server), depurar e testar |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Os repositórios, como os serviços conversam e o log de decisões (ADRs)            |
 | [`docs/DER.pdf`](docs/DER.pdf)                 | Diagrama entidade-relacionamento                                                  |
-| [`docs/postman/`](docs/postman/)               | Coleção Postman com todos os endpoints dos três serviços                          |
+| [`docs/postman/`](docs/postman/)               | Coleção Postman: os endpoints por repositório e módulo, o fluxo completo, o RabbitMQ e o Spring Batch |
 
 Cada aplicação documenta o próprio interior no seu repositório:
 

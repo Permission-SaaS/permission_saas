@@ -115,7 +115,7 @@ profile. Os arquivos ficam em [`config-repo/`](../config-repo/) (ADR-012):
 | `config-repo/audit-service-prod.yml`      | o `audit-service` em `prod`      | endereço do banco                      |
 
 Senhas e segredos não ficam no `config-repo/`: o Config Server entrega a configuração em texto puro.
-Para ver o que cada serviço recebe (ou pela pasta `config-server (8888)` do Postman):
+Para ver o que cada serviço recebe (ou pela pasta `4. permission_saas_config (8888)` do Postman):
 
 ```bash
 curl http://localhost:8888/permission-service/prod
@@ -141,7 +141,8 @@ na fila `audit.events`, e o `audit-service` consome e grava (ADR-013; o formato 
   mostra cada mensagem publicada (`published`) e gravada (`registered`).
 - **Demonstração com o consumidor parado:** `docker compose stop audit-service`, valide permissões, veja
   as mensagens esperando na fila e religue com `docker compose start audit-service`. A pasta
-  `audit-service fora do ar` do Postman faz o roteiro com asserções.
+  `Consumidor fora do ar (manual)`, em `5. RabbitMQ` no Postman, faz o roteiro com asserções. As outras
+  duas subpastas de `5. RabbitMQ` testam o caminho feliz e a fila de mortas sem passo manual.
 
 ## Importação de rotas em lote (Spring Batch)
 
@@ -149,7 +150,7 @@ na fila `audit.events`, e o `audit-service` consome e grava (ADR-013; o formato 
 `description`, nessa ordem, separadas por `,` ou `;`) e
 dispara o job `importRoutesJob`, que lê em lotes de 10, normaliza ou descarta cada linha e grava as
 rotas (ADR-014; regras no [`API.md` da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/API.md)). Use o `projectId` de um projeto existente, por exemplo o
-criado pela pasta `Fluxo completo` do Postman:
+criado pela pasta `1. Fluxo completo` do Postman:
 
 ```bash
 curl -F "file=@docs/postman/rotas-exemplo.csv" http://localhost:8080/projects/<projectId>/routes/import
@@ -169,8 +170,8 @@ essas rotas.
   O `commit_count` mostra os lotes: 2 para o arquivo de exemplo (10 linhas e depois 6).
 - **Logs:** `docker compose logs permission-service | grep "Route import"` mostra cada lote gravado e
   cada linha descartada, com o motivo.
-- **Postman:** a pasta `Importacao de rotas (Spring Batch)`, logo depois do `Fluxo completo`. No newman,
-  rode com `--working-dir docs/postman` para ele achar o CSV.
+- **Postman:** a pasta `6. Spring Batch`, que cria e remove os próprios projetos e importa os dois CSVs. No
+  newman, rode com `--working-dir docs/postman` para ele achar os arquivos.
 
 ## Rodar na máquina (profile `dev`)
 
@@ -227,6 +228,36 @@ Em cada projeto (`permission_saas_api/`, `permission_saas_audit/`, `permission_s
 
 Os testes da aplicação principal rodam no profile `test`, com H2 em memória: não precisam de banco nem
 do Config Server. Os outros dois projetos ainda não têm testes automatizados.
+
+## Coleção do Postman
+
+A coleção fica em `docs/postman/permission-saas.postman_collection.json`, com asserções em cada
+requisição. As pastas rodam de cima para baixo:
+
+| Pasta                              | O que tem                                                                                         |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `1. Fluxo completo`                | O caminho feliz de ponta a ponta. Cria o cliente, o plano, a ApiKey, o projeto, o cargo e a rota que as pastas seguintes usam: **rode-a primeiro** |
+| `2. permission_saas_api (8080)`    | Uma subpasta por módulo (`shared`, `identity`, `billing`, `permission`, `project`, `audit`), com os endpoints e os casos de erro |
+| `3. permission_saas_audit (8081)`  | O `audit-service` chamado direto                                                                  |
+| `4. permission_saas_config (8888)` | A configuração que o Config Server entrega                                                        |
+| `5. RabbitMQ`                      | `Caminho feliz`, `Mensagem invalida vai para a fila de mortas` e `Consumidor fora do ar (manual)` |
+| `6. Spring Batch`                  | A importação de rotas com vírgula e com ponto e vírgula, em projetos que a pasta cria e remove   |
+
+Para rodar sem abrir o Postman, da raiz do guarda-chuva e com a stack no ar:
+
+```bash
+npx newman run docs/postman/permission-saas.postman_collection.json --working-dir docs/postman \
+  --folder "1. Fluxo completo" --folder "2. permission_saas_api (8080)" \
+  --folder "3. permission_saas_audit (8081)" --folder "4. permission_saas_config (8888)" \
+  --folder "Caminho feliz" --folder "Mensagem invalida vai para a fila de mortas" --folder "6. Spring Batch"
+```
+
+- O `--working-dir` faz o newman achar os CSVs da pasta `6. Spring Batch`.
+- A subpasta `Consumidor fora do ar (manual)` fica de fora porque pede parar e religar o `audit-service`
+  no meio. O roteiro está na descrição dela.
+- Cada execução cria dados novos (cliente, plano, projeto do fluxo completo) e deixa uma mensagem de teste
+  na `audit.events.dlq`, com `source` começando por `postman-dlq-test-`. Para esvaziar a DLQ, use *Purge
+  Messages* na fila, no painel do RabbitMQ.
 
 ## Trabalhar com os submódulos
 

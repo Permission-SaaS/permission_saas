@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Permission SaaS",
-    "description": "Colecao de requisicoes da API do Permission SaaS.\n\nOrdem sugerida: execute a pasta 'Fluxo completo' de cima para baixo — cada requisicao guarda em variaveis de colecao o que a proxima precisa (clientId, planId, apiKey, projectId).\n\nVariavel baseUrl: http://localhost:8080\n\nVariavel auditBaseUrl: http://localhost:8081 — usada pela pasta 'audit-service (8081)', que chama o servico extraido direto.\n\nVariavel configBaseUrl: http://localhost:8888 — usada pela pasta 'config-server (8888)', que mostra a configuracao centralizada.\n\nPasta 'audit-service fora do ar': roteiro da demonstracao com o consumidor parado — pare o audit-service antes das requisicoes 1 a 3 e religue antes da 4.\n\nVariaveis rabbitBaseUrl, rabbitUser e rabbitPassword: a API do painel do RabbitMQ (http://localhost:15672), usada para ver a fila audit.events.",
+    "description": "Colecao de requisicoes do Permission SaaS, em seis pastas que rodam de cima para baixo:\n\n1. Fluxo completo — o caminho feliz de ponta a ponta. Cria o cliente, o plano, a ApiKey, o projeto, o cargo e a rota que as pastas seguintes usam. Rode-a primeiro.\n2. permission_saas_api (8080) — a aplicacao principal, uma subpasta por modulo (shared, identity, billing, permission, project, audit), com os endpoints e os casos de erro.\n3. permission_saas_audit (8081) — o audit-service chamado direto.\n4. permission_saas_config (8888) — a configuracao que o Config Server entrega.\n5. RabbitMQ — a gravacao da auditoria pela fila: caminho feliz, mensagem invalida indo para a fila de mortas e o consumidor fora do ar (manual).\n6. Spring Batch — a importacao de rotas por CSV, com virgula e com ponto e virgula, em projetos que a propria pasta cria e remove.\n\nEnderecos: baseUrl (8080), auditBaseUrl (8081), configBaseUrl (8888) e rabbitBaseUrl (15672, painel do RabbitMQ, com rabbitUser e rabbitPassword). As demais variaveis sao preenchidas pelas proprias requisicoes.\n\nRodar sem abrir o Postman, da raiz do guarda-chuva, com a stack no ar. A subpasta 'Consumidor fora do ar (manual)' pede parar e religar o audit-service no meio, entao fica fora; o --working-dir faz o newman achar os CSVs:\n\nnpx newman run docs/postman/permission-saas.postman_collection.json --working-dir docs/postman --folder \"1. Fluxo completo\" --folder \"2. permission_saas_api (8080)\" --folder \"3. permission_saas_audit (8081)\" --folder \"4. permission_saas_config (8888)\" --folder \"Caminho feliz\" --folder \"Mensagem invalida vai para a fila de mortas\" --folder \"6. Spring Batch\"",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -46,10 +46,6 @@
       "value": ""
     },
     {
-      "key": "errorProjectId",
-      "value": ""
-    },
-    {
       "key": "roleId",
       "value": ""
     },
@@ -64,11 +60,47 @@
     {
       "key": "outageStartedAt",
       "value": ""
+    },
+    {
+      "key": "identityEmail",
+      "value": ""
+    },
+    {
+      "key": "identityClientId",
+      "value": ""
+    },
+    {
+      "key": "billingPlanId",
+      "value": ""
+    },
+    {
+      "key": "testProjectId",
+      "value": ""
+    },
+    {
+      "key": "rabbitStartedAt",
+      "value": ""
+    },
+    {
+      "key": "dlqMarker",
+      "value": ""
+    },
+    {
+      "key": "batchProjectId",
+      "value": ""
+    },
+    {
+      "key": "batchSemicolonProjectId",
+      "value": ""
+    },
+    {
+      "key": "dlqAttempt",
+      "value": ""
     }
   ],
   "item": [
     {
-      "name": "Fluxo completo",
+      "name": "1. Fluxo completo",
       "item": [
         {
           "name": "1. Ping",
@@ -628,14 +660,2822 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "O caminho feliz de ponta a ponta: cliente, plano, assinatura (ApiKey), projeto, cargo, rota, concessao e as validacoes de permissao, terminando na trilha de auditoria.\n\nRode esta pasta primeiro: ela guarda em variaveis de colecao (clientId, planId, apiKey, projectId, roleId, routeId) os dados que as pastas 2 a 5 usam."
     },
     {
-      "name": "Importacao de rotas (Spring Batch)",
-      "description": "Importa rotas em lote a partir de docs/postman/rotas-exemplo.csv (16 linhas: 12 validas e 4 que o processor descarta: metodo HTTP invalido, linha sem path, rota repetida no arquivo e GET /users, que o 'Fluxo completo' ja cadastrou).\n\nPre-requisito: rodar antes a pasta 'Fluxo completo', que cria o projeto. Rode esta pasta uma vez por projeto: na segunda vez todas as rotas ja existem.\n\nArquivo: no Postman, se o campo 'file' aparecer sem arquivo, selecione docs/postman/rotas-exemplo.csv. No newman, use --working-dir docs/postman.\n\nDepois, a execucao fica registrada nas tabelas do Spring Batch: docker compose exec postgres psql -U saas -d permissions_saas -c \"select * from batch_step_execution\"",
+      "name": "2. permission_saas_api (8080)",
       "item": [
         {
-          "name": "1. 200 — importar o CSV de exemplo",
+          "name": "shared",
+          "item": [
+            {
+              "name": "Ping",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/ping",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ping"
+                  ]
+                },
+                "description": "Verifica se a aplicacao esta no ar."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Health (actuator)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/actuator/health",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "actuator",
+                    "health"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('status UP', () => pm.expect(pm.response.json().status).to.eql('UP'));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "description": "Endpoints de infraestrutura da aplicacao principal."
+        },
+        {
+          "name": "identity",
+          "item": [
+            {
+              "name": "201 — registrar cliente",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/clients/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "clients",
+                    "register"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ana Silva\",\n  \"email\": \"{{identityEmail}}\",\n  \"rawPassword\": \"secret123\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set('identityEmail', 'ana.' + Date.now() + '@example.com');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                      "pm.collectionVariables.set('identityClientId', pm.response.json().id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "409 — e-mail ja cadastrado",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/clients/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "clients",
+                    "register"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ana Silva\",\n  \"email\": \"{{identityEmail}}\",\n  \"rawPassword\": \"secret123\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Listar clientes",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/clients",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "clients"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('inclui o cliente registrado', () => {",
+                      "    const ids = pm.response.json().map(c => c.id);",
+                      "    pm.expect(ids).to.include(pm.collectionVariables.get('identityClientId'));",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Obter cliente por id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/clients/{{identityClientId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "clients",
+                    "{{identityClientId}}"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('e o cliente registrado', () => pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get('identityEmail')));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "404 — cliente inexistente",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/clients/99999999-9999-9999-9999-999999999999",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "clients",
+                    "99999999-9999-9999-9999-999999999999"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "description": "Cadastro e consulta de clientes. O cliente do Fluxo completo nao e alterado: esta pasta registra um proprio."
+        },
+        {
+          "name": "billing",
+          "item": [
+            {
+              "name": "201 — cadastrar plano",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/plans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "plans"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Basic {{$timestamp}}\",\n  \"description\": \"Plano da pasta billing\",\n  \"maxProjects\": 3,\n  \"maxUsersPerProject\": 10,\n  \"price\": 49.90\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                      "pm.collectionVariables.set('billingPlanId', pm.response.json().id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Listar planos",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/plans",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "plans"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('inclui o plano cadastrado', () => {",
+                      "    const ids = pm.response.json().map(p => p.id);",
+                      "    pm.expect(ids).to.include(pm.collectionVariables.get('billingPlanId'));",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Obter plano por id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/plans/{{billingPlanId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "plans",
+                    "{{billingPlanId}}"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('e o plano cadastrado', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('billingPlanId')));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "404 — plano inexistente",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/plans/99999999-9999-9999-9999-999999999999",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "plans",
+                    "99999999-9999-9999-9999-999999999999"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "409 — assinar de novo o mesmo plano",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/subscriptions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "subscriptions"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"planId\": \"{{planId}}\"\n}"
+                },
+                "description": "O cliente do Fluxo completo ja tem assinatura ativa neste plano. A assinatura que da certo (201, gera a ApiKey) esta no Fluxo completo: repeti-la aqui com outro plano trocaria o plano e revogaria a ApiKey que as outras pastas usam."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "description": "Planos e assinatura. A assinatura com sucesso fica no Fluxo completo, que guarda a ApiKey."
+        },
+        {
+          "name": "permission",
+          "item": [
+            {
+              "name": "200 — permitido",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"apiKey\": \"{{apiKey}}\",\n  \"projectId\": \"{{projectId}}\",\n  \"role\": \"ADMIN\",\n  \"httpMethod\": \"GET\",\n  \"route\": \"/users\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/validate-permission",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "validate-permission"
+                  ]
+                },
+                "description": "Passa pela cadeia de handlers e publica o evento consumido pela auditoria."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('permitido', () => pm.expect(pm.response.json().granted).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "200 — negado (ApiKey invalida)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('negado', () => pm.expect(pm.response.json().granted).to.eql(false));",
+                      "pm.test('motivo correto', () => pm.expect(pm.response.json().reason).to.eql('invalid or inactive api key'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"apiKey\": \"chave-invalida\",\n  \"projectId\": \"{{projectId}}\",\n  \"role\": \"ADMIN\",\n  \"httpMethod\": \"GET\",\n  \"route\": \"/users\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/validate-permission",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "validate-permission"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "400 — corpo invalido",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/validate-permission",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "validate-permission"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"apiKey\": \"{{apiKey}}\",\n  \"projectId\": \"{{projectId}}\",\n  \"httpMethod\": \"GET\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                      "pm.test('aponta os campos que faltam', () => {",
+                      "    const message = pm.response.json().message;",
+                      "    pm.expect(message).to.include('role');",
+                      "    pm.expect(message).to.include('route');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "description": "A validacao de permissao (Chain of Responsibility). Os outros motivos de negativa (rota, cargo, concessao) estao nos passos 11 a 13 do Fluxo completo."
+        },
+        {
+          "name": "project",
+          "item": [
+            {
+              "name": "projects",
+              "item": [
+                {
+                  "name": "201 — criar o projeto de testes",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"name\": \"Projeto dos erros\",\n  \"description\": \"Usado pelos casos 409\",\n  \"maxRoles\": 1\n}"
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/projects",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects"
+                      ]
+                    },
+                    "description": "Cria um projeto proprio para os casos de conflito, sem depender do projeto do fluxo principal (que e excluido na pasta Projects)."
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                          "pm.collectionVariables.set('testProjectId', pm.response.json().id);"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Listar projetos",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects"
+                      ]
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Listar projetos filtrando por nome",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects?name=portal&onlyActive=true",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects"
+                      ],
+                      "query": [
+                        {
+                          "key": "name",
+                          "value": "portal"
+                        },
+                        {
+                          "key": "onlyActive",
+                          "value": "true"
+                        }
+                      ]
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Obter projeto por id",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{projectId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{projectId}}"
+                      ]
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Alterar projeto",
+                  "request": {
+                    "method": "PUT",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"Portal do Cliente v2\",\n  \"description\": \"Descricao atualizada\",\n  \"maxRoles\": 8\n}"
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{projectId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{projectId}}"
+                      ]
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "400 — projeto sem nome e com maxRoles invalido",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"maxRoles\": 0\n}"
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/projects",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects"
+                      ]
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('400 Bad Request', () => pm.response.to.have.status(400));"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "404 — projeto inexistente",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/99999999-9999-9999-9999-999999999999",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "99999999-9999-9999-9999-999999999999"
+                      ]
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ],
+              "description": "CRUD de projetos. O primeiro passo cria o projeto de testes (testProjectId, com maxRoles 1), usado pelas subpastas roles, routes e exclusao; o projeto do Fluxo completo so e lido e alterado."
+            },
+            {
+              "name": "roles",
+              "item": [
+                {
+                  "name": "201 — adicionar cargo",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"ADMIN\",\n  \"description\": \"Primeira insercao, deve passar\"\n}"
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{testProjectId}}/roles",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{testProjectId}}",
+                        "roles"
+                      ]
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('201 Created', () => pm.response.to.have.status(201));"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "409 — cargo duplicado",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"admin\"\n}"
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{testProjectId}}/roles",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{testProjectId}}",
+                        "roles"
+                      ]
+                    },
+                    "description": "Mesmo cargo da requisicao anterior, com outra caixa: a duplicidade e verificada sem diferenciar maiusculas."
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "409 — limite de cargos do plano excedido",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"SUPORTE\"\n}"
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{testProjectId}}/roles",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{testProjectId}}",
+                        "roles"
+                      ]
+                    },
+                    "description": "O projeto foi criado com maxRoles = 1 e ja tem um cargo."
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ],
+              "description": "Cargos do projeto de testes."
+            },
+            {
+              "name": "routes",
+              "item": [
+                {
+                  "name": "201 — adicionar rota",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{testProjectId}}/routes",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{testProjectId}}",
+                        "routes"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"Listar pedidos\",\n  \"path\": \"/orders\",\n  \"httpMethod\": \"GET\",\n  \"description\": \"Rota do projeto de testes\"\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('201 Created', () => pm.response.to.have.status(201));"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "409 — rota duplicada (mesmo metodo e path)",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{testProjectId}}/routes",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{testProjectId}}",
+                        "routes"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"Listar pedidos\",\n  \"path\": \"/orders\",\n  \"httpMethod\": \"GET\",\n  \"description\": \"Rota do projeto de testes\"\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Listar rotas do projeto",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{testProjectId}}/routes",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{testProjectId}}",
+                        "routes"
+                      ]
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                          "pm.test('so a rota adicionada', () => pm.expect(pm.response.json()).to.have.lengthOf(1));"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Listar rotas do projeto filtrando por metodo",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{projectId}}/routes?httpMethod=GET",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{projectId}}",
+                        "routes"
+                      ],
+                      "query": [
+                        {
+                          "key": "httpMethod",
+                          "value": "GET"
+                        }
+                      ]
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ],
+              "description": "Rotas do projeto. A importacao por CSV fica na pasta 6. Spring Batch."
+            },
+            {
+              "name": "role-routes",
+              "item": [
+                {
+                  "name": "409 — conceder a mesma rota duas vezes",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes/{{routeId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{projectId}}",
+                        "roles",
+                        "{{roleId}}",
+                        "routes",
+                        "{{routeId}}"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "name": "404 — conceder uma rota inexistente",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes/99999999-9999-9999-9999-999999999999",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{projectId}}",
+                        "roles",
+                        "{{roleId}}",
+                        "routes",
+                        "99999999-9999-9999-9999-999999999999"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "name": "Listar as concessoes ativas do cargo",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                          "pm.test('uma concessao ativa', () => pm.expect(pm.response.json().length).to.eql(1));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{projectId}}",
+                        "roles",
+                        "{{roleId}}",
+                        "routes"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "name": "204 — revogar a concessao",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes/{{routeId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{projectId}}",
+                        "roles",
+                        "{{roleId}}",
+                        "routes",
+                        "{{routeId}}"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "name": "404 — revogar de novo",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes/{{routeId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{projectId}}",
+                        "roles",
+                        "{{roleId}}",
+                        "routes",
+                        "{{routeId}}"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "name": "Concessoes ativas apos a revogacao",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                          "pm.test('nenhuma concessao ativa', () => pm.expect(pm.response.json().length).to.eql(0));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{projectId}}",
+                        "roles",
+                        "{{roleId}}",
+                        "routes"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "name": "Historico preserva a concessao revogada",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                          "pm.test('a linha revogada continua no historico', () => pm.expect(pm.response.json().length).to.eql(1));",
+                          "pm.test('com data de revogacao', () => pm.expect(pm.response.json()[0].revokedAt).to.not.eql(null));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes?includeRevoked=true",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{projectId}}",
+                        "roles",
+                        "{{roleId}}",
+                        "routes"
+                      ],
+                      "query": [
+                        {
+                          "key": "includeRevoked",
+                          "value": "true"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "name": "201 — conceder de novo apos revogar",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('201 Created', () => pm.response.to.have.status(201));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes/{{routeId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{projectId}}",
+                        "roles",
+                        "{{roleId}}",
+                        "routes",
+                        "{{routeId}}"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "name": "Historico agora tem duas linhas",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                          "pm.test('duas concessoes no historico', () => pm.expect(pm.response.json().length).to.eql(2));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes?includeRevoked=true",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{projectId}}",
+                        "roles",
+                        "{{roleId}}",
+                        "routes"
+                      ],
+                      "query": [
+                        {
+                          "key": "includeRevoked",
+                          "value": "true"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ],
+              "description": "Quais rotas cada cargo pode acessar, com historico de concessao e revogacao. Usa o projeto, o cargo e a rota do Fluxo completo."
+            },
+            {
+              "name": "exclusao",
+              "item": [
+                {
+                  "name": "204 — excluir o projeto de testes (exclusao logica)",
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{testProjectId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{testProjectId}}"
+                      ]
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "404 — excluir projeto ja excluido",
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{testProjectId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{testProjectId}}"
+                      ]
+                    },
+                    "description": "Rode logo depois de 'Excluir projeto': o soft delete faz o projeto responder como inexistente."
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "204 — remover definitivamente o projeto de testes",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{testProjectId}}/purge",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{testProjectId}}",
+                        "purge"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "name": "404 — remover definitivamente um projeto inexistente",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/projects/{{testProjectId}}/purge",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "projects",
+                        "{{testProjectId}}",
+                        "purge"
+                      ]
+                    }
+                  }
+                }
+              ],
+              "description": "Exclusao logica e remocao definitiva (purge) do projeto de testes. Fica por ultimo porque apaga o projeto que as subpastas anteriores usam. O projeto do Fluxo completo continua ativo para as pastas seguintes."
+            }
+          ],
+          "description": "Projetos, cargos, rotas e concessoes. As subpastas rodam nesta ordem."
+        },
+        {
+          "name": "audit",
+          "item": [
+            {
+              "name": "Listar trilha de auditoria",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/audit-events",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Listar apenas as tentativas negadas",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/audit-events?onlyDenied=true",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "onlyDenied",
+                      "value": "true"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Filtrar por tipo de evento",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/audit-events?type=PERMISSION_CHECK",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "PERMISSION_CHECK"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Filtrar por periodo",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/audit-events?from=2026-01-01T00:00:00Z&to=2099-12-31T23:59:59Z",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-01-01T00:00:00Z"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2099-12-31T23:59:59Z"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('todos os eventos dentro do periodo', () => {",
+                      "    const from = new Date('2026-01-01T00:00:00Z');",
+                      "    const to = new Date('2099-12-31T23:59:59Z');",
+                      "    pm.response.json().forEach(e => {",
+                      "        const at = new Date(e.occurredAt);",
+                      "        pm.expect(at >= from && at <= to).to.be.true;",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Negadas a partir de uma data",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/audit-events?onlyDenied=true&from=2026-01-01T00:00:00Z",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "onlyDenied",
+                      "value": "true"
+                    },
+                    {
+                      "key": "from",
+                      "value": "2026-01-01T00:00:00Z"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('so validacoes negadas', () => {",
+                      "    pm.response.json().forEach(e => {",
+                      "        pm.expect(e.type).to.eql('PERMISSION_CHECK');",
+                      "        pm.expect(e.description).to.match(/^NEGADO/);",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Tipo em minusculas e aceito",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/audit-events?type=permission_check",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "permission_check"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('filtro aplicado como PERMISSION_CHECK', () => {",
+                      "    pm.response.json().forEach(e => pm.expect(e.type).to.eql('PERMISSION_CHECK'));",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "onlyDenied com PROJECT_LIFECYCLE devolve vazio",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/audit-events?onlyDenied=true&type=PROJECT_LIFECYCLE",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "onlyDenied",
+                      "value": "true"
+                    },
+                    {
+                      "key": "type",
+                      "value": "PROJECT_LIFECYCLE"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('lista vazia: ciclo de vida nunca e negado', () => pm.expect(pm.response.json()).to.have.lengthOf(0));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 — periodo invertido (from depois de to)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/audit-events?from=2026-09-20T00:00:00Z&to=2026-09-01T00:00:00Z",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-09-20T00:00:00Z"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-09-01T00:00:00Z"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                      "pm.test('mensagem cita o periodo', () => pm.expect(pm.response.json().message).to.include('Invalid audit period'));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "description": "A consulta da trilha de auditoria pela aplicacao principal, que valida os filtros e repassa ao audit-service por OpenFeign (ADR-010). Com o audit-service fora do ar, responde 503."
+        }
+      ],
+      "description": "A aplicacao principal (permission-service), um modulo por subpasta. Usa os dados do Fluxo completo."
+    },
+    {
+      "name": "3. permission_saas_audit (8081)",
+      "item": [
+        {
+          "name": "audit",
+          "item": [
+            {
+              "name": "Health do servico",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{auditBaseUrl}}/actuator/health",
+                  "host": [
+                    "{{auditBaseUrl}}"
+                  ],
+                  "path": [
+                    "actuator",
+                    "health"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('status UP', () => pm.expect(pm.response.json().status).to.eql('UP'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "201 — registrar validacao negada",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"projectId\": \"11111111-1111-1111-1111-111111111111\",\n  \"occurredAt\": \"2026-09-28T20:00:00Z\",\n  \"routePath\": \"/produtos\",\n  \"httpMethod\": \"get\",\n  \"roleName\": \"ADMIN\",\n  \"granted\": false,\n  \"reason\": \"invalid or inactive api key\",\n  \"durationMs\": 3.5\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{auditBaseUrl}}/audit-events/permission-checks",
+                  "host": [
+                    "{{auditBaseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events",
+                    "permission-checks"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                      "const body = pm.response.json();",
+                      "pm.test('metodo gravado em maiusculas', () => pm.expect(body.description).to.include('NEGADO GET /produtos'));",
+                      "pm.collectionVariables.set('auditEventId', body.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Consultar a trilha do servico",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{auditBaseUrl}}/audit-events?projectId=11111111-1111-1111-1111-111111111111",
+                  "host": [
+                    "{{auditBaseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "projectId",
+                      "value": "11111111-1111-1111-1111-111111111111"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('contem o evento registrado', () => {",
+                      "    const ids = pm.response.json().map(e => e.id);",
+                      "    pm.expect(ids).to.include(pm.collectionVariables.get('auditEventId'));",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Negadas a partir de uma data",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{auditBaseUrl}}/audit-events?onlyDenied=true&from=2026-09-01T00:00:00Z",
+                  "host": [
+                    "{{auditBaseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "onlyDenied",
+                      "value": "true"
+                    },
+                    {
+                      "key": "from",
+                      "value": "2026-09-01T00:00:00Z"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('so validacoes negadas', () => pm.response.json().forEach(e => pm.expect(e.description).to.match(/^NEGADO/)));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 — campos invalidos",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"projectId\": \"11111111-1111-1111-1111-111111111111\",\n  \"occurredAt\": \"2026-09-28T20:00:00Z\",\n  \"routePath\": \"produtos\",\n  \"httpMethod\": \"GET\",\n  \"roleName\": \"ADMIN\",\n  \"durationMs\": 3.5\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{auditBaseUrl}}/audit-events/permission-checks",
+                  "host": [
+                    "{{auditBaseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events",
+                    "permission-checks"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                      "pm.test('cita routePath e granted', () => {",
+                      "    const msg = pm.response.json().message;",
+                      "    pm.expect(msg).to.include('routePath');",
+                      "    pm.expect(msg).to.include('granted');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 — corpo malformado",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"projectId\": \"nao-e-uuid\"",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{auditBaseUrl}}/audit-events/permission-checks",
+                  "host": [
+                    "{{auditBaseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events",
+                    "permission-checks"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                      "pm.test('mensagem generica, sem detalhe interno', () => pm.expect(pm.response.json().message).to.eql('Malformed request body'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 — periodo invertido",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{auditBaseUrl}}/audit-events?from=2026-09-20T00:00:00Z&to=2026-09-01T00:00:00Z",
+                  "host": [
+                    "{{auditBaseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-09-20T00:00:00Z"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-09-01T00:00:00Z"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                      "pm.test('mensagem cita o periodo', () => pm.expect(pm.response.json().message).to.include('Invalid audit period'));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "description": "O audit-service chamado direto, sem passar pela aplicacao principal."
+        }
+      ],
+      "description": "O servico de auditoria (audit-service). A gravacao pela fila esta na pasta 5. RabbitMQ."
+    },
+    {
+      "name": "4. permission_saas_config (8888)",
+      "item": [
+        {
+          "name": "config",
+          "item": [
+            {
+              "name": "Configuracao da aplicacao principal (prod)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "const sources = pm.response.json().propertySources;",
+                      "pm.test('fonte especifica da aplicacao principal', () => pm.expect(sources[0].name).to.include('permission-service-prod.yml'));",
+                      "pm.test('endereco do audit-service pela rede do Compose', () => pm.expect(sources[0].source['audit.service.url']).to.eql('http://audit-service:8081'));",
+                      "pm.test('sem senha na configuracao central', () => pm.expect(pm.response.text()).to.not.include('password'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{configBaseUrl}}/permission-service/prod",
+                  "host": [
+                    "{{configBaseUrl}}"
+                  ],
+                  "path": [
+                    "permission-service",
+                    "prod"
+                  ]
+                },
+                "description": "O que a aplicacao principal recebe no profile prod: endereco do banco e do audit-service (config-repo/permission-service-prod.yml) e o que vale para todos (config-repo/application-prod.yml)."
+              }
+            },
+            {
+              "name": "Configuracao do audit-service (prod)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "const sources = pm.response.json().propertySources;",
+                      "pm.test('banco proprio do servico', () => pm.expect(sources[0].source['spring.datasource.url']).to.include('audit-postgres:5432/audit_db'));",
+                      "pm.test('arquivo compartilhado entre os servicos', () => pm.expect(sources.map(s => s.name).join()).to.include('application-prod.yml'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{configBaseUrl}}/audit-service/prod",
+                  "host": [
+                    "{{configBaseUrl}}"
+                  ],
+                  "path": [
+                    "audit-service",
+                    "prod"
+                  ]
+                },
+                "description": "O que o audit-service recebe no profile prod: endereco do proprio banco (config-repo/audit-service-prod.yml) e o que vale para todos (config-repo/application-prod.yml)."
+              }
+            }
+          ],
+          "description": "Cada resposta lista as fontes (propertySources) que o servico recebe no profile prod, da mais especifica para a mais geral."
+        }
+      ],
+      "description": "O Config Server, servindo os arquivos de config-repo/ do repositorio guarda-chuva. Para ver uma mudanca valer: edite um arquivo de config-repo/ e rode docker compose restart <servico>."
+    },
+    {
+      "name": "5. RabbitMQ",
+      "item": [
+        {
+          "name": "Caminho feliz",
+          "item": [
+            {
+              "name": "1. 200 — validar permissao (publica na fila)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/validate-permission",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "validate-permission"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"apiKey\": \"{{apiKey}}\",\n  \"projectId\": \"{{projectId}}\",\n  \"role\": \"ADMIN\",\n  \"httpMethod\": \"GET\",\n  \"route\": \"/users\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set('rabbitStartedAt', new Date().toISOString());"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. O audit-service consumiu e gravou",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{auditBaseUrl}}/audit-events?projectId={{projectId}}&from={{rabbitStartedAt}}",
+                  "host": [
+                    "{{auditBaseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "projectId",
+                      "value": "{{projectId}}"
+                    },
+                    {
+                      "key": "from",
+                      "value": "{{rabbitStartedAt}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// a validacao publica em segundo plano e o consumidor grava logo depois",
+                      "setTimeout(() => {}, 2000);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('a validacao do passo 1 esta na trilha', () => {",
+                      "    const events = pm.response.json();",
+                      "    pm.expect(events).to.have.lengthOf(1);",
+                      "    pm.expect(events[0].type).to.eql('PERMISSION_CHECK');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. A fila audit.events esta vazia",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{rabbitBaseUrl}}/api/queues/%2F/audit.events/get",
+                  "host": [
+                    "{{rabbitBaseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "queues",
+                    "%2F",
+                    "audit.events",
+                    "get"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"count\": 100,\n  \"ackmode\": \"ack_requeue_true\",\n  \"encoding\": \"auto\"\n}"
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{rabbitUser}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{rabbitPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('nada esperando consumo', () => pm.expect(pm.response.json()).to.have.lengthOf(0));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "description": "Uma validacao de permissao vira mensagem na fila audit.events, o audit-service consome e grava. Precisa da stack inteira no ar."
+        },
+        {
+          "name": "Mensagem invalida vai para a fila de mortas",
+          "item": [
+            {
+              "name": "1. Publicar uma mensagem de tipo desconhecido",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{rabbitBaseUrl}}/api/exchanges/%2F/amq.default/publish",
+                  "host": [
+                    "{{rabbitBaseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "exchanges",
+                    "%2F",
+                    "amq.default",
+                    "publish"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"properties\": { \"content_type\": \"application/json\" },\n  \"routing_key\": \"audit.events\",\n  \"payload\": \"{\\\"source\\\":\\\"{{dlqMarker}}\\\",\\\"type\\\":\\\"UNKNOWN_TYPE\\\",\\\"occurredAt\\\":\\\"2026-10-06T12:00:00Z\\\",\\\"payload\\\":{}}\",\n  \"payload_encoding\": \"string\"\n}"
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{rabbitUser}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{rabbitPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Publica direto na fila audit.events pela API do painel do RabbitMQ, como se fosse um produtor. O source leva um marcador unico, para o passo 2 achar esta mensagem."
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set('dlqMarker', 'postman-dlq-test-' + Date.now());"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('o broker entregou a mensagem na fila', () => pm.expect(pm.response.json().routed).to.be.true);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. Depois das tentativas, ela esta na audit.events.dlq",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{rabbitBaseUrl}}/api/queues/%2F/audit.events.dlq/get",
+                  "host": [
+                    "{{rabbitBaseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "queues",
+                    "%2F",
+                    "audit.events.dlq",
+                    "get"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"count\": 100,\n  \"ackmode\": \"ack_requeue_true\",\n  \"encoding\": \"auto\"\n}"
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{rabbitUser}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{rabbitPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "No Runner e no newman, consulta de novo sozinha ate achar a mensagem (no maximo 10 vezes, a cada 2 segundos). Enviando so esta requisicao pelo Postman, se ela falhar, espere alguns segundos e envie de novo."
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// o consumidor tenta 3 vezes antes de rejeitar de vez: leva alguns segundos",
+                      "setTimeout(() => {}, 2000);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const marker = pm.collectionVariables.get('dlqMarker');",
+                      "const dead = pm.response.json().find(m => m.payload.includes(marker));",
+                      "const attempt = Number(pm.collectionVariables.get('dlqAttempt') || 0) + 1;",
+                      "",
+                      "if (!dead && attempt < 10) {",
+                      "    // ainda nao chegou: repete esta mesma requisicao (so tem efeito no Runner e no newman)",
+                      "    pm.collectionVariables.set('dlqAttempt', attempt);",
+                      "    postman.setNextRequest(pm.info.requestName);",
+                      "} else {",
+                      "    pm.collectionVariables.unset('dlqAttempt');",
+                      "    pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "    pm.test('a mensagem foi parar na fila de mortas', () => pm.expect(dead).to.not.be.undefined);",
+                      "    pm.test('rejeitada pelo consumidor, vinda da audit.events', () => {",
+                      "        pm.expect(dead.properties.headers['x-first-death-reason']).to.eql('rejected');",
+                      "        pm.expect(dead.properties.headers['x-first-death-queue']).to.eql('audit.events');",
+                      "    });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "description": "O audit-service rejeita o que nunca vai conseguir gravar (aqui, um type desconhecido) e a mensagem vai para a audit.events.dlq em vez de travar a fila (ADR-013). Cada execucao deixa uma mensagem de teste na DLQ, com o source postman-dlq-test-<hora>; para limpar, use Purge Messages na fila, no painel do RabbitMQ."
+        },
+        {
+          "name": "Consumidor fora do ar (manual)",
+          "item": [
+            {
+              "name": "1. 200 — validacao segue respondendo com o consumidor fora",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set('outageStartedAt', new Date().toISOString());"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "// permitida ou negada, a validacao vai para a fila do mesmo jeito"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"apiKey\": \"{{apiKey}}\",\n  \"projectId\": \"{{projectId}}\",\n  \"role\": \"ADMIN\",\n  \"httpMethod\": \"GET\",\n  \"route\": \"/users\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/validate-permission",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "validate-permission"
+                  ]
+                },
+                "description": "Com o audit-service parado. A validacao de permissao nao espera a auditoria: responde 200 e publica a mensagem na fila audit.events, onde ela fica esperando o consumidor."
+              }
+            },
+            {
+              "name": "2. A mensagem espera na fila",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "const messages = pm.response.json();",
+                      "pm.test('mensagem aguardando na fila', () => pm.expect(messages.length).to.be.at.least(1));",
+                      "pm.test('envelope da auditoria', () => {",
+                      "    const envelope = JSON.parse(messages[messages.length - 1].payload);",
+                      "    pm.expect(envelope.source).to.eql('permission-service');",
+                      "    pm.expect(envelope.type).to.eql('PERMISSION_CHECK');",
+                      "    pm.expect(envelope.payload.projectId).to.eql(pm.collectionVariables.get('projectId'));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{rabbitUser}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{rabbitPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"count\": 10,\n  \"ackmode\": \"ack_requeue_true\",\n  \"encoding\": \"auto\"\n}"
+                },
+                "url": {
+                  "raw": "{{rabbitBaseUrl}}/api/queues/%2F/audit.events/get",
+                  "host": [
+                    "{{rabbitBaseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "queues",
+                    "%2F",
+                    "audit.events",
+                    "get"
+                  ]
+                },
+                "description": "Le as mensagens da fila audit.events pela API do painel do RabbitMQ, sem tira-las de la (ackmode ack_requeue_true, o mesmo que o botao \"Get messages\" com \"Nack message requeue true\"). Com o consumidor parado, a mensagem da requisicao 1 esta ali, no envelope {source, type, occurredAt, payload}. Le as mensagens em vez das contagens da fila porque o painel atualiza as contagens a cada 5 segundos."
+              }
+            },
+            {
+              "name": "3. 503 — consulta da trilha com o servico fora",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('503 Service Unavailable', () => pm.response.to.have.status(503));",
+                      "pm.test('mensagem generica', () => pm.expect(pm.response.json().message).to.eql('Audit service is unavailable'));",
+                      "pm.test('nao vaza detalhe interno', () => {",
+                      "    pm.expect(Object.keys(pm.response.json())).to.have.members(['status', 'error', 'message', 'timestamp']);",
+                      "    pm.expect(pm.response.text()).to.not.match(/feign|exception|refused|localhost/i);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/audit-events",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events"
+                  ]
+                },
+                "description": "Com o audit-service parado. A consulta continua sendo HTTP (OpenFeign) e precisa da resposta na hora: sem o servico, a aplicacao principal devolve 503 com uma mensagem generica."
+              }
+            },
+            {
+              "name": "4. 200 — servico religado, o evento da requisicao 1 chegou",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// o painel do RabbitMQ e o consumidor atualizam com alguns segundos de atraso",
+                      "setTimeout(() => {}, 3000);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('o evento do periodo fora do ar nao se perdeu', () => {",
+                      "    const events = pm.response.json();",
+                      "    pm.expect(events).to.have.lengthOf(1);",
+                      "    pm.expect(events[0].type).to.eql('PERMISSION_CHECK');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/audit-events?projectId={{projectId}}&from={{outageStartedAt}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "projectId",
+                      "value": "{{projectId}}"
+                    },
+                    {
+                      "key": "from",
+                      "value": "{{outageStartedAt}}"
+                    }
+                  ]
+                },
+                "description": "Com o audit-service de volta. Ele consome o que esperava na fila e grava: a trilha tem o evento da requisicao 1, que na etapa 2 (HTTP) teria se perdido."
+              }
+            },
+            {
+              "name": "5. A fila esvaziou",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// o consumidor leva alguns instantes para processar o que esperava na fila",
+                      "setTimeout(() => {}, 2000);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "pm.test('fila vazia', () => pm.expect(pm.response.json()).to.have.lengthOf(0));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{rabbitUser}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{rabbitPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"count\": 10,\n  \"ackmode\": \"ack_requeue_true\",\n  \"encoding\": \"auto\"\n}"
+                },
+                "url": {
+                  "raw": "{{rabbitBaseUrl}}/api/queues/%2F/audit.events/get",
+                  "host": [
+                    "{{rabbitBaseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "queues",
+                    "%2F",
+                    "audit.events",
+                    "get"
+                  ]
+                },
+                "description": "Com o audit-service de volta: a fila audit.events nao tem mais nenhuma mensagem pendente, porque o consumidor processou o que esperava."
+              }
+            }
+          ],
+          "description": "Demonstra o que acontece quando o audit-service, o consumidor da fila, esta fora do ar. Precisa de passos manuais, por isso fica fora da execucao automatica (ver a descricao da colecao).\n\nRoteiro:\n1. Pare o audit-service: docker compose stop audit-service.\n2. Rode as requisicoes 1, 2 e 3.\n3. Religue: docker compose start audit-service, e espere ele ficar healthy (docker compose ps).\n4. Rode as requisicoes 4 e 5.\n\nA gravacao vai pela fila e espera o consumidor voltar; a consulta e HTTP e responde 503 enquanto ele esta fora. A fila tambem pode ser acompanhada no painel: http://localhost:15672 (usuario saas, senha saas123), aba Queues."
+        }
+      ],
+      "description": "A gravacao da auditoria pela fila audit.events (ADR-013). As duas primeiras subpastas rodam sozinhas; a terceira pede parar e religar o audit-service no meio."
+    },
+    {
+      "name": "6. Spring Batch",
+      "item": [
+        {
+          "name": "Setup — projeto da importacao com virgula",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"name\": \"Importacao CSV com virgula\",\n  \"description\": \"Criado e removido pela pasta Spring Batch\",\n  \"maxRoles\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('batchProjectId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup — rota GET /users ja cadastrada (com virgula)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{batchProjectId}}/routes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "{{batchProjectId}}",
+                "routes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Listar usuarios\",\n  \"path\": \"/users\",\n  \"httpMethod\": \"GET\"\n}"
+            },
+            "description": "Uma rota que tambem esta no CSV: a importacao precisa descarta-la como repetida."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1. 200 — importar o CSV com virgula",
           "event": [
             {
               "listen": "test",
@@ -668,13 +3508,13 @@
               ]
             },
             "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}/routes/import",
+              "raw": "{{baseUrl}}/projects/{{batchProjectId}}/routes/import",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "projects",
-                "{{projectId}}",
+                "{{batchProjectId}}",
                 "routes",
                 "import"
               ]
@@ -713,13 +3553,13 @@
               ]
             },
             "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}/routes/import",
+              "raw": "{{baseUrl}}/projects/{{batchProjectId}}/routes/import",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "projects",
-                "{{projectId}}",
+                "{{batchProjectId}}",
                 "routes",
                 "import"
               ]
@@ -737,7 +3577,7 @@
                 "exec": [
                   "pm.test('200 OK', () => pm.response.to.have.status(200));",
                   "const routes = pm.response.json();",
-                  "pm.test('GET /users do Fluxo completo + 12 importadas', () => pm.expect(routes).to.have.lengthOf(13));",
+                  "pm.test('GET /users do setup + 12 importadas', () => pm.expect(routes).to.have.lengthOf(13));",
                   "pm.test('linhas normalizadas', () => {",
                   "    const keys = routes.map(r => r.httpMethod + ' ' + r.path);",
                   "    pm.expect(keys).to.include('POST /orders');",
@@ -752,13 +3592,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}/routes",
+              "raw": "{{baseUrl}}/projects/{{batchProjectId}}/routes",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "projects",
-                "{{projectId}}",
+                "{{batchProjectId}}",
                 "routes"
               ]
             },
@@ -766,7 +3606,131 @@
           }
         },
         {
-          "name": "4. 400 — sem o arquivo",
+          "name": "Setup — projeto da importacao com ponto e virgula",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"name\": \"Importacao CSV com ponto e virgula\",\n  \"description\": \"Criado e removido pela pasta Spring Batch\",\n  \"maxRoles\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('batchSemicolonProjectId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup — rota GET /users ja cadastrada (com ponto e virgula)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{batchSemicolonProjectId}}/routes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "{{batchSemicolonProjectId}}",
+                "routes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Listar usuarios\",\n  \"path\": \"/users\",\n  \"httpMethod\": \"GET\"\n}"
+            },
+            "description": "Uma rota que tambem esta no CSV: a importacao precisa descarta-la como repetida."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. 200 — importar o CSV com ponto e virgula",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('job concluido', () => pm.expect(r.status).to.eql('COMPLETED'));",
+                  "pm.test('16 lidas, 12 importadas, 4 descartadas', () => {",
+                  "    pm.expect(r.read).to.eql(16);",
+                  "    pm.expect(r.imported).to.eql(12);",
+                  "    pm.expect(r.discarded).to.eql(4);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "rotas-exemplo-ponto-e-virgula.csv"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{batchSemicolonProjectId}}/routes/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "{{batchSemicolonProjectId}}",
+                "routes",
+                "import"
+              ]
+            },
+            "description": "O mesmo exemplo salvo como o Excel em portugues salva, com ponto e virgula. O BatchRouteImporter acha o separador no cabecalho e o resultado e o mesmo do CSV com virgula."
+          }
+        },
+        {
+          "name": "5. 400 — sem o arquivo",
           "event": [
             {
               "listen": "test",
@@ -793,13 +3757,13 @@
               ]
             },
             "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}/routes/import",
+              "raw": "{{baseUrl}}/projects/{{batchProjectId}}/routes/import",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "projects",
-                "{{projectId}}",
+                "{{batchProjectId}}",
                 "routes",
                 "import"
               ]
@@ -808,7 +3772,7 @@
           }
         },
         {
-          "name": "5. 404 — projeto inexistente",
+          "name": "6. 404 — projeto inexistente",
           "event": [
             {
               "listen": "test",
@@ -847,839 +3811,52 @@
             },
             "description": "O projeto e conferido antes de disparar o job."
           }
-        }
-      ]
-    },
-    {
-      "name": "Role x Route (concessao e historico)",
-      "item": [
-        {
-          "name": "409 — conceder a mesma rota duas vezes",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes/{{routeId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{projectId}}",
-                "roles",
-                "{{roleId}}",
-                "routes",
-                "{{routeId}}"
-              ]
-            }
-          }
         },
         {
-          "name": "404 — conceder uma rota inexistente",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes/99999999-9999-9999-9999-999999999999",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{projectId}}",
-                "roles",
-                "{{roleId}}",
-                "routes",
-                "99999999-9999-9999-9999-999999999999"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Listar as concessoes ativas do cargo",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('uma concessao ativa', () => pm.expect(pm.response.json().length).to.eql(1));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{projectId}}",
-                "roles",
-                "{{roleId}}",
-                "routes"
-              ]
-            }
-          }
-        },
-        {
-          "name": "204 — revogar a concessao",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('204 No Content', () => pm.response.to.have.status(204));"
-                ]
-              }
-            }
-          ],
+          "name": "Limpeza — remover o projeto da importacao com virgula",
           "request": {
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes/{{routeId}}",
+              "raw": "{{baseUrl}}/projects/{{batchProjectId}}/purge",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "projects",
-                "{{projectId}}",
-                "roles",
-                "{{roleId}}",
-                "routes",
-                "{{routeId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "404 — revogar de novo",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes/{{routeId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{projectId}}",
-                "roles",
-                "{{roleId}}",
-                "routes",
-                "{{routeId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Concessoes ativas apos a revogacao",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('nenhuma concessao ativa', () => pm.expect(pm.response.json().length).to.eql(0));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{projectId}}",
-                "roles",
-                "{{roleId}}",
-                "routes"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Historico preserva a concessao revogada",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('a linha revogada continua no historico', () => pm.expect(pm.response.json().length).to.eql(1));",
-                  "pm.test('com data de revogacao', () => pm.expect(pm.response.json()[0].revokedAt).to.not.eql(null));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes?includeRevoked=true",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{projectId}}",
-                "roles",
-                "{{roleId}}",
-                "routes"
-              ],
-              "query": [
-                {
-                  "key": "includeRevoked",
-                  "value": "true"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "201 — conceder de novo apos revogar",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('201 Created', () => pm.response.to.have.status(201));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes/{{routeId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{projectId}}",
-                "roles",
-                "{{roleId}}",
-                "routes",
-                "{{routeId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Historico agora tem duas linhas",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('duas concessoes no historico', () => pm.expect(pm.response.json().length).to.eql(2));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}/roles/{{roleId}}/routes?includeRevoked=true",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{projectId}}",
-                "roles",
-                "{{roleId}}",
-                "routes"
-              ],
-              "query": [
-                {
-                  "key": "includeRevoked",
-                  "value": "true"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Projects",
-      "item": [
-        {
-          "name": "Listar projetos",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Listar projetos filtrando por nome",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects?name=portal&onlyActive=true",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects"
-              ],
-              "query": [
-                {
-                  "key": "name",
-                  "value": "portal"
-                },
-                {
-                  "key": "onlyActive",
-                  "value": "true"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Obter projeto por id",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{projectId}}"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Alterar projeto",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Portal do Cliente v2\",\n  \"description\": \"Descricao atualizada\",\n  \"maxRoles\": 8\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{projectId}}"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Listar rotas do projeto filtrando por metodo",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}/routes?httpMethod=GET",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{projectId}}",
-                "routes"
-              ],
-              "query": [
-                {
-                  "key": "httpMethod",
-                  "value": "GET"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Excluir projeto",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{projectId}}"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('204 No Content', () => pm.response.to.have.status(204));"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Erros esperados",
-      "item": [
-        {
-          "name": "Setup — projeto exclusivo dos testes de erro",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"name\": \"Projeto dos erros\",\n  \"description\": \"Usado pelos casos 409\",\n  \"maxRoles\": 1\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/projects",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects"
-              ]
-            },
-            "description": "Cria um projeto proprio para os casos de conflito, sem depender do projeto do fluxo principal (que e excluido na pasta Projects)."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('errorProjectId', pm.response.json().id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Setup — primeiro cargo (201)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"ADMIN\",\n  \"description\": \"Primeira insercao, deve passar\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{errorProjectId}}/roles",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{errorProjectId}}",
-                "roles"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('201 Created', () => pm.response.to.have.status(201));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "409 — cargo duplicado",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"admin\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{errorProjectId}}/roles",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{errorProjectId}}",
-                "roles"
-              ]
-            },
-            "description": "Mesmo cargo da requisicao anterior, com outra caixa: a duplicidade e verificada sem diferenciar maiusculas."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "409 — limite de cargos do plano excedido",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"SUPORTE\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{errorProjectId}}/roles",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{errorProjectId}}",
-                "roles"
-              ]
-            },
-            "description": "O projeto foi criado com maxRoles = 1 e ja tem um cargo."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "400 — projeto sem nome e com maxRoles invalido",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"maxRoles\": 0\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/projects",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "404 — projeto inexistente",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/99999999-9999-9999-9999-999999999999",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "99999999-9999-9999-9999-999999999999"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "404 — excluir projeto ja excluido",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{projectId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{projectId}}"
-              ]
-            },
-            "description": "Rode logo depois de 'Excluir projeto': o soft delete faz o projeto responder como inexistente."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "204 — remover definitivamente o projeto de testes",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('204 No Content', () => pm.response.to.have.status(204));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/projects/{{errorProjectId}}/purge",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "projects",
-                "{{errorProjectId}}",
+                "{{batchProjectId}}",
                 "purge"
               ]
             }
-          }
-        },
-        {
-          "name": "404 — remover definitivamente um projeto inexistente",
+          },
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                  "pm.test('204 No Content', () => pm.response.to.have.status(204));"
                 ]
               }
             }
-          ],
+          ]
+        },
+        {
+          "name": "Limpeza — remover o projeto da importacao com ponto e virgula",
           "request": {
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/projects/{{errorProjectId}}/purge",
+              "raw": "{{baseUrl}}/projects/{{batchSemicolonProjectId}}/purge",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "projects",
-                "{{errorProjectId}}",
+                "{{batchSemicolonProjectId}}",
                 "purge"
               ]
             }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Audit",
-      "item": [
-        {
-          "name": "Listar trilha de auditoria",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/audit-events",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "audit-events"
-              ]
-            }
           },
           "event": [
             {
@@ -1687,903 +3864,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Listar apenas as tentativas negadas",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/audit-events?onlyDenied=true",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "audit-events"
-              ],
-              "query": [
-                {
-                  "key": "onlyDenied",
-                  "value": "true"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Filtrar por tipo de evento",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/audit-events?type=PERMISSION_CHECK",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "audit-events"
-              ],
-              "query": [
-                {
-                  "key": "type",
-                  "value": "PERMISSION_CHECK"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Filtrar por periodo",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/audit-events?from=2026-01-01T00:00:00Z&to=2099-12-31T23:59:59Z",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "audit-events"
-              ],
-              "query": [
-                {
-                  "key": "from",
-                  "value": "2026-01-01T00:00:00Z"
-                },
-                {
-                  "key": "to",
-                  "value": "2099-12-31T23:59:59Z"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('todos os eventos dentro do periodo', () => {",
-                  "    const from = new Date('2026-01-01T00:00:00Z');",
-                  "    const to = new Date('2099-12-31T23:59:59Z');",
-                  "    pm.response.json().forEach(e => {",
-                  "        const at = new Date(e.occurredAt);",
-                  "        pm.expect(at >= from && at <= to).to.be.true;",
-                  "    });",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Negadas a partir de uma data",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/audit-events?onlyDenied=true&from=2026-01-01T00:00:00Z",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "audit-events"
-              ],
-              "query": [
-                {
-                  "key": "onlyDenied",
-                  "value": "true"
-                },
-                {
-                  "key": "from",
-                  "value": "2026-01-01T00:00:00Z"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('so validacoes negadas', () => {",
-                  "    pm.response.json().forEach(e => {",
-                  "        pm.expect(e.type).to.eql('PERMISSION_CHECK');",
-                  "        pm.expect(e.description).to.match(/^NEGADO/);",
-                  "    });",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Tipo em minusculas e aceito",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/audit-events?type=permission_check",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "audit-events"
-              ],
-              "query": [
-                {
-                  "key": "type",
-                  "value": "permission_check"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('filtro aplicado como PERMISSION_CHECK', () => {",
-                  "    pm.response.json().forEach(e => pm.expect(e.type).to.eql('PERMISSION_CHECK'));",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "onlyDenied com PROJECT_LIFECYCLE devolve vazio",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/audit-events?onlyDenied=true&type=PROJECT_LIFECYCLE",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "audit-events"
-              ],
-              "query": [
-                {
-                  "key": "onlyDenied",
-                  "value": "true"
-                },
-                {
-                  "key": "type",
-                  "value": "PROJECT_LIFECYCLE"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('lista vazia: ciclo de vida nunca e negado', () => pm.expect(pm.response.json()).to.have.lengthOf(0));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "400 — periodo invertido (from depois de to)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/audit-events?from=2026-09-20T00:00:00Z&to=2026-09-01T00:00:00Z",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "audit-events"
-              ],
-              "query": [
-                {
-                  "key": "from",
-                  "value": "2026-09-20T00:00:00Z"
-                },
-                {
-                  "key": "to",
-                  "value": "2026-09-01T00:00:00Z"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
-                  "pm.test('mensagem cita o periodo', () => pm.expect(pm.response.json().message).to.include('Invalid audit period'));"
+                  "pm.test('204 No Content', () => pm.response.to.have.status(204));"
                 ]
               }
             }
           ]
         }
-      ]
-    },
-    {
-      "name": "audit-service (8081)",
-      "description": "Servico de auditoria chamado direto, sem passar pela aplicacao principal. Suba com: docker compose up -d audit-postgres && cd audit-service && ./mvnw spring-boot:run (num terminal sem o .env da raiz exportado).",
-      "item": [
-        {
-          "name": "Health do servico",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{auditBaseUrl}}/actuator/health",
-              "host": [
-                "{{auditBaseUrl}}"
-              ],
-              "path": [
-                "actuator",
-                "health"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('status UP', () => pm.expect(pm.response.json().status).to.eql('UP'));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "201 — registrar validacao negada",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"projectId\": \"11111111-1111-1111-1111-111111111111\",\n  \"occurredAt\": \"2026-09-28T20:00:00Z\",\n  \"routePath\": \"/produtos\",\n  \"httpMethod\": \"get\",\n  \"roleName\": \"ADMIN\",\n  \"granted\": false,\n  \"reason\": \"invalid or inactive api key\",\n  \"durationMs\": 3.5\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{auditBaseUrl}}/audit-events/permission-checks",
-              "host": [
-                "{{auditBaseUrl}}"
-              ],
-              "path": [
-                "audit-events",
-                "permission-checks"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
-                  "const body = pm.response.json();",
-                  "pm.test('metodo gravado em maiusculas', () => pm.expect(body.description).to.include('NEGADO GET /produtos'));",
-                  "pm.collectionVariables.set('auditEventId', body.id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Consultar a trilha do servico",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{auditBaseUrl}}/audit-events?projectId=11111111-1111-1111-1111-111111111111",
-              "host": [
-                "{{auditBaseUrl}}"
-              ],
-              "path": [
-                "audit-events"
-              ],
-              "query": [
-                {
-                  "key": "projectId",
-                  "value": "11111111-1111-1111-1111-111111111111"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('contem o evento registrado', () => {",
-                  "    const ids = pm.response.json().map(e => e.id);",
-                  "    pm.expect(ids).to.include(pm.collectionVariables.get('auditEventId'));",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Negadas a partir de uma data",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{auditBaseUrl}}/audit-events?onlyDenied=true&from=2026-09-01T00:00:00Z",
-              "host": [
-                "{{auditBaseUrl}}"
-              ],
-              "path": [
-                "audit-events"
-              ],
-              "query": [
-                {
-                  "key": "onlyDenied",
-                  "value": "true"
-                },
-                {
-                  "key": "from",
-                  "value": "2026-09-01T00:00:00Z"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('so validacoes negadas', () => pm.response.json().forEach(e => pm.expect(e.description).to.match(/^NEGADO/)));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "400 — campos invalidos",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"projectId\": \"11111111-1111-1111-1111-111111111111\",\n  \"occurredAt\": \"2026-09-28T20:00:00Z\",\n  \"routePath\": \"produtos\",\n  \"httpMethod\": \"GET\",\n  \"roleName\": \"ADMIN\",\n  \"durationMs\": 3.5\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{auditBaseUrl}}/audit-events/permission-checks",
-              "host": [
-                "{{auditBaseUrl}}"
-              ],
-              "path": [
-                "audit-events",
-                "permission-checks"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
-                  "pm.test('cita routePath e granted', () => {",
-                  "    const msg = pm.response.json().message;",
-                  "    pm.expect(msg).to.include('routePath');",
-                  "    pm.expect(msg).to.include('granted');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "400 — corpo malformado",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"projectId\": \"nao-e-uuid\"",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{auditBaseUrl}}/audit-events/permission-checks",
-              "host": [
-                "{{auditBaseUrl}}"
-              ],
-              "path": [
-                "audit-events",
-                "permission-checks"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
-                  "pm.test('mensagem generica, sem detalhe interno', () => pm.expect(pm.response.json().message).to.eql('Malformed request body'));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "400 — periodo invertido",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{auditBaseUrl}}/audit-events?from=2026-09-20T00:00:00Z&to=2026-09-01T00:00:00Z",
-              "host": [
-                "{{auditBaseUrl}}"
-              ],
-              "path": [
-                "audit-events"
-              ],
-              "query": [
-                {
-                  "key": "from",
-                  "value": "2026-09-20T00:00:00Z"
-                },
-                {
-                  "key": "to",
-                  "value": "2026-09-01T00:00:00Z"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
-                  "pm.test('mensagem cita o periodo', () => pm.expect(pm.response.json().message).to.include('Invalid audit period'));"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "audit-service fora do ar",
-      "description": "Demonstra o que acontece quando o audit-service, o consumidor da fila, esta fora do ar.\n\nPre-requisito: rodar antes a pasta 'Fluxo completo' (preenche apiKey e projectId).\n\nRoteiro:\n1. Pare o audit-service: docker compose stop audit-service.\n2. Rode as requisicoes 1, 2 e 3.\n3. Religue: docker compose start audit-service, e espere ele ficar healthy (docker compose ps).\n4. Rode as requisicoes 4 e 5.\n\nA gravacao vai pela fila (RabbitMQ) e espera o consumidor voltar; a consulta e HTTP e responde 503 enquanto ele esta fora. A fila tambem pode ser acompanhada no painel do RabbitMQ: http://localhost:15672 (usuario saas, senha saas123), aba Queues.",
-      "item": [
-        {
-          "name": "1. 200 — validacao segue respondendo com o consumidor fora",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.collectionVariables.set('outageStartedAt', new Date().toISOString());"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "// permitida ou negada (se o projeto foi excluido pela pasta Projects), a validacao vai para a fila do mesmo jeito"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"apiKey\": \"{{apiKey}}\",\n  \"projectId\": \"{{projectId}}\",\n  \"role\": \"ADMIN\",\n  \"httpMethod\": \"GET\",\n  \"route\": \"/users\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/validate-permission",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "validate-permission"
-              ]
-            },
-            "description": "Com o audit-service parado. A validacao de permissao nao espera a auditoria: responde 200 e publica a mensagem na fila audit.events, onde ela fica esperando o consumidor."
-          }
-        },
-        {
-          "name": "2. A mensagem espera na fila",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "const messages = pm.response.json();",
-                  "pm.test('mensagem aguardando na fila', () => pm.expect(messages.length).to.be.at.least(1));",
-                  "pm.test('envelope da auditoria', () => {",
-                  "    const envelope = JSON.parse(messages[messages.length - 1].payload);",
-                  "    pm.expect(envelope.source).to.eql('permission-service');",
-                  "    pm.expect(envelope.type).to.eql('PERMISSION_CHECK');",
-                  "    pm.expect(envelope.payload.projectId).to.eql(pm.collectionVariables.get('projectId'));",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "auth": {
-              "type": "basic",
-              "basic": [
-                {
-                  "key": "username",
-                  "value": "{{rabbitUser}}",
-                  "type": "string"
-                },
-                {
-                  "key": "password",
-                  "value": "{{rabbitPassword}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"count\": 10,\n  \"ackmode\": \"ack_requeue_true\",\n  \"encoding\": \"auto\"\n}"
-            },
-            "url": {
-              "raw": "{{rabbitBaseUrl}}/api/queues/%2F/audit.events/get",
-              "host": [
-                "{{rabbitBaseUrl}}"
-              ],
-              "path": [
-                "api",
-                "queues",
-                "%2F",
-                "audit.events",
-                "get"
-              ]
-            },
-            "description": "Le as mensagens da fila audit.events pela API do painel do RabbitMQ, sem tira-las de la (ackmode ack_requeue_true, o mesmo que o botao \"Get messages\" com \"Nack message requeue true\"). Com o consumidor parado, a mensagem da requisicao 1 esta ali, no envelope {source, type, occurredAt, payload}. Le as mensagens em vez das contagens da fila porque o painel atualiza as contagens a cada 5 segundos."
-          }
-        },
-        {
-          "name": "3. 503 — consulta da trilha com o servico fora",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('503 Service Unavailable', () => pm.response.to.have.status(503));",
-                  "pm.test('mensagem generica', () => pm.expect(pm.response.json().message).to.eql('Audit service is unavailable'));",
-                  "pm.test('nao vaza detalhe interno', () => {",
-                  "    pm.expect(Object.keys(pm.response.json())).to.have.members(['status', 'error', 'message', 'timestamp']);",
-                  "    pm.expect(pm.response.text()).to.not.match(/feign|exception|refused|localhost/i);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/audit-events",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "audit-events"
-              ]
-            },
-            "description": "Com o audit-service parado. A consulta continua sendo HTTP (OpenFeign) e precisa da resposta na hora: sem o servico, a aplicacao principal devolve 503 com uma mensagem generica."
-          }
-        },
-        {
-          "name": "4. 200 — servico religado, o evento da requisicao 1 chegou",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// o painel do RabbitMQ e o consumidor atualizam com alguns segundos de atraso",
-                  "setTimeout(() => {}, 3000);"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('o evento do periodo fora do ar nao se perdeu', () => {",
-                  "    const events = pm.response.json();",
-                  "    pm.expect(events).to.have.lengthOf(1);",
-                  "    pm.expect(events[0].type).to.eql('PERMISSION_CHECK');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/audit-events?projectId={{projectId}}&from={{outageStartedAt}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "audit-events"
-              ],
-              "query": [
-                {
-                  "key": "projectId",
-                  "value": "{{projectId}}"
-                },
-                {
-                  "key": "from",
-                  "value": "{{outageStartedAt}}"
-                }
-              ]
-            },
-            "description": "Com o audit-service de volta. Ele consome o que esperava na fila e grava: a trilha tem o evento da requisicao 1, que na etapa 2 (HTTP) teria se perdido."
-          }
-        },
-        {
-          "name": "5. A fila esvaziou",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// o consumidor leva alguns instantes para processar o que esperava na fila",
-                  "setTimeout(() => {}, 2000);"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('fila vazia', () => pm.expect(pm.response.json()).to.have.lengthOf(0));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "auth": {
-              "type": "basic",
-              "basic": [
-                {
-                  "key": "username",
-                  "value": "{{rabbitUser}}",
-                  "type": "string"
-                },
-                {
-                  "key": "password",
-                  "value": "{{rabbitPassword}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"count\": 10,\n  \"ackmode\": \"ack_requeue_true\",\n  \"encoding\": \"auto\"\n}"
-            },
-            "url": {
-              "raw": "{{rabbitBaseUrl}}/api/queues/%2F/audit.events/get",
-              "host": [
-                "{{rabbitBaseUrl}}"
-              ],
-              "path": [
-                "api",
-                "queues",
-                "%2F",
-                "audit.events",
-                "get"
-              ]
-            },
-            "description": "Com o audit-service de volta: a fila audit.events nao tem mais nenhuma mensagem pendente, porque o consumidor processou o que esperava."
-          }
-        }
-      ]
-    },
-    {
-      "name": "config-server (8888)",
-      "description": "Configuracao centralizada servida pelo Config Server, a partir dos arquivos de config-repo/. Cada resposta lista as fontes (propertySources) que o servico recebe no profile prod, da mais especifica para a mais geral. Suba com: docker compose up -d --build. Para ver uma mudanca valer: edite um arquivo de config-repo/ e rode docker compose restart <servico>.",
-      "item": [
-        {
-          "name": "Configuracao da aplicacao principal (prod)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "const sources = pm.response.json().propertySources;",
-                  "pm.test('fonte especifica da aplicacao principal', () => pm.expect(sources[0].name).to.include('permission-service-prod.yml'));",
-                  "pm.test('endereco do audit-service pela rede do Compose', () => pm.expect(sources[0].source['audit.service.url']).to.eql('http://audit-service:8081'));",
-                  "pm.test('sem senha na configuracao central', () => pm.expect(pm.response.text()).to.not.include('password'));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{configBaseUrl}}/permission-service/prod",
-              "host": [
-                "{{configBaseUrl}}"
-              ],
-              "path": [
-                "permission-service",
-                "prod"
-              ]
-            },
-            "description": "O que a aplicacao principal recebe no profile prod: endereco do banco e do audit-service (config-repo/permission-service-prod.yml) e o que vale para todos (config-repo/application-prod.yml)."
-          }
-        },
-        {
-          "name": "Configuracao do audit-service (prod)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "const sources = pm.response.json().propertySources;",
-                  "pm.test('banco proprio do servico', () => pm.expect(sources[0].source['spring.datasource.url']).to.include('audit-postgres:5432/audit_db'));",
-                  "pm.test('arquivo compartilhado entre os servicos', () => pm.expect(sources.map(s => s.name).join()).to.include('application-prod.yml'));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{configBaseUrl}}/audit-service/prod",
-              "host": [
-                "{{configBaseUrl}}"
-              ],
-              "path": [
-                "audit-service",
-                "prod"
-              ]
-            },
-            "description": "O que o audit-service recebe no profile prod: endereco do proprio banco (config-repo/audit-service-prod.yml) e o que vale para todos (config-repo/application-prod.yml)."
-          }
-        }
-      ]
+      ],
+      "description": "Importacao de rotas por CSV (ADR-014), em dois projetos que a propria pasta cria e remove: roda quantas vezes quiser, em qualquer ordem depois do Fluxo completo (que fornece o clientId).\n\nOs arquivos estao em docs/postman/ do repositorio guarda-chuva: rotas-exemplo.csv (virgula) e rotas-exemplo-ponto-e-virgula.csv. Cada um tem 16 linhas: 12 validas e 4 que o processor descarta (metodo HTTP invalido, linha sem path, rota repetida no arquivo e GET /users, ja cadastrada pelo setup).\n\nArquivo: no Postman, se o campo 'file' aparecer sem arquivo, selecione o CSV em docs/postman/. No newman, use --working-dir docs/postman.\n\nCada execucao fica registrada nas tabelas do Spring Batch: docker compose exec postgres psql -U saas -d permissions_saas -c \"select * from batch_step_execution\""
     }
   ]
 }
