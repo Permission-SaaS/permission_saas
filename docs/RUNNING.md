@@ -145,7 +145,8 @@ na fila `audit.events`, e o `audit-service` consome e grava (ADR-013; o formato 
 
 ## Importação de rotas em lote (Spring Batch)
 
-`POST /projects/{projectId}/routes/import` recebe um CSV (`name,httpMethod,path,description`) e
+`POST /projects/{projectId}/routes/import` recebe um CSV (colunas `name`, `httpMethod`, `path` e
+`description`, nessa ordem, separadas por `,` ou `;`) e
 dispara o job `importRoutesJob`, que lê em lotes de 10, normaliza ou descarta cada linha e grava as
 rotas (ADR-014; regras no [`API.md` da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/API.md)). Use o `projectId` de um projeto existente, por exemplo o
 criado pela pasta `Fluxo completo` do Postman:
@@ -154,6 +155,10 @@ criado pela pasta `Fluxo completo` do Postman:
 curl -F "file=@docs/postman/rotas-exemplo.csv" http://localhost:8080/projects/<projectId>/routes/import
 # {"executionId":1,"status":"COMPLETED","read":16,"imported":12,"discarded":4}
 ```
+
+O mesmo exemplo com ponto e vírgula, como o Excel em português salva, está em
+`docs/postman/rotas-exemplo-ponto-e-virgula.csv` e dá o mesmo resultado num projeto que ainda não tenha
+essas rotas.
 
 - **Histórico das execuções:** cada execução fica nas tabelas do Spring Batch, criadas pela migration
   `V11`. Para ver os contadores de cada uma:
