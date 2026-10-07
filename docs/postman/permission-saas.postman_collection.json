@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Permission SaaS",
-    "description": "Colecao de requisicoes do Permission SaaS, em seis pastas que rodam de cima para baixo:\n\n1. Fluxo completo — o caminho feliz de ponta a ponta. Cria o cliente, o plano, a ApiKey, o projeto, o cargo e a rota que as pastas seguintes usam. Rode-a primeiro.\n2. permission_saas_api (8080) — a aplicacao principal, uma subpasta por modulo (shared, identity, billing, permission, project, audit), com os endpoints e os casos de erro.\n3. permission_saas_audit (8081) — o audit-service chamado direto.\n4. permission_saas_config (8888) — a configuracao que o Config Server entrega.\n5. RabbitMQ — a gravacao da auditoria pela fila: caminho feliz, mensagem invalida indo para a fila de mortas e o consumidor fora do ar (manual).\n6. Spring Batch — a importacao de rotas por CSV, com virgula e com ponto e virgula, em projetos que a propria pasta cria e remove.\n\nEnderecos: baseUrl (8080), auditBaseUrl (8081), configBaseUrl (8888) e rabbitBaseUrl (15672, painel do RabbitMQ, com rabbitUser e rabbitPassword). As demais variaveis sao preenchidas pelas proprias requisicoes.\n\nRodar sem abrir o Postman, da raiz do guarda-chuva, com a stack no ar. A subpasta 'Consumidor fora do ar (manual)' pede parar e religar o audit-service no meio, entao fica fora; o --working-dir faz o newman achar os CSVs:\n\nnpx newman run docs/postman/permission-saas.postman_collection.json --working-dir docs/postman --folder \"1. Fluxo completo\" --folder \"2. permission_saas_api (8080)\" --folder \"3. permission_saas_audit (8081)\" --folder \"4. permission_saas_config (8888)\" --folder \"Caminho feliz\" --folder \"Mensagem invalida vai para a fila de mortas\" --folder \"6. Spring Batch\"",
+    "description": "Colecao de requisicoes do Permission SaaS, em seis pastas que rodam de cima para baixo:\n\n1. Fluxo completo — o caminho feliz de ponta a ponta. Cria o cliente, o plano, a ApiKey, o projeto, o cargo e a rota que as pastas seguintes usam. Rode-a primeiro.\n2. permission_saas_api (8080) — a aplicacao principal, uma subpasta por modulo (shared, identity, billing, permission, project, audit), com os endpoints e os casos de erro.\n3. permission_saas_audit (8081) — o audit-service chamado direto.\n4. permission_saas_config (8888) — a configuracao que o Config Server entrega.\n5. RabbitMQ — a gravacao da auditoria pela fila: caminho feliz, mensagem invalida indo para a fila de mortas e o consumidor fora do ar (manual).\n6. Spring Batch — a importacao de rotas por CSV, com virgula, com ponto e virgula e com acentos em UTF-8 e Windows-1252, em projetos que a propria pasta cria e remove.\n\nEnderecos: baseUrl (8080), auditBaseUrl (8081), configBaseUrl (8888) e rabbitBaseUrl (15672, painel do RabbitMQ, com rabbitUser e rabbitPassword). As demais variaveis sao preenchidas pelas proprias requisicoes.\n\nRodar sem abrir o Postman, da raiz do guarda-chuva, com a stack no ar. A subpasta 'Consumidor fora do ar (manual)' pede parar e religar o audit-service no meio, entao fica fora; o --working-dir faz o newman achar os CSVs:\n\nnpx newman run docs/postman/permission-saas.postman_collection.json --working-dir docs/postman --folder \"1. Fluxo completo\" --folder \"2. permission_saas_api (8080)\" --folder \"3. permission_saas_audit (8081)\" --folder \"4. permission_saas_config (8888)\" --folder \"Caminho feliz\" --folder \"Mensagem invalida vai para a fila de mortas\" --folder \"6. Spring Batch\"",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -95,6 +95,14 @@
     },
     {
       "key": "dlqAttempt",
+      "value": ""
+    },
+    {
+      "key": "batchAccentUtf8ProjectId",
+      "value": ""
+    },
+    {
+      "key": "batchAccentWindowsProjectId",
       "value": ""
     }
   ],
@@ -3813,6 +3821,248 @@
           }
         },
         {
+          "name": "Setup — projeto da importacao com acentos (UTF-8)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"name\": \"Importacao CSV com acentos (UTF-8)\",\n  \"description\": \"Criado e removido pela pasta Spring Batch\",\n  \"maxRoles\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('batchAccentUtf8ProjectId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. 200 — importar o CSV com acentos em UTF-8",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{batchAccentUtf8ProjectId}}/routes/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "{{batchAccentUtf8ProjectId}}",
+                "routes",
+                "import"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "rotas-exemplo-com-acentos.csv"
+                }
+              ]
+            },
+            "description": "O exemplo com acentos (Relatório, usuários), separado por ponto e virgula e salvo em UTF-8. O projeto nao tem a rota GET /users, entao ela entra: 13 importadas e 3 descartadas."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('job concluido', () => pm.expect(r.status).to.eql('COMPLETED'));",
+                  "pm.test('16 lidas, 13 importadas, 3 descartadas', () => {",
+                  "    pm.expect(r.read).to.eql(16);",
+                  "    pm.expect(r.imported).to.eql(13);",
+                  "    pm.expect(r.discarded).to.eql(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. Acentos preservados (UTF-8)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{batchAccentUtf8ProjectId}}/routes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "{{batchAccentUtf8ProjectId}}",
+                "routes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const names = pm.response.json().map(route => route.name);",
+                  "pm.test('nomes com acento chegaram iguais ao arquivo', () => {",
+                  "    pm.expect(names).to.include('Relatório de vendas');",
+                  "    pm.expect(names).to.include('Listar usuários');",
+                  "    pm.expect(names).to.include('Criar usuário');",
+                  "});",
+                  "pm.test('nenhum caractere trocado por \\uFFFD', () => pm.expect(names.join()).to.not.include('\\uFFFD'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup — projeto da importacao com acentos (Windows-1252)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"name\": \"Importacao CSV com acentos (Windows-1252)\",\n  \"description\": \"Criado e removido pela pasta Spring Batch\",\n  \"maxRoles\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('batchAccentWindowsProjectId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. 200 — importar o CSV com acentos em Windows-1252",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{batchAccentWindowsProjectId}}/routes/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "{{batchAccentWindowsProjectId}}",
+                "routes",
+                "import"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "rotas-exemplo-com-acentos-windows-1252.csv"
+                }
+              ]
+            },
+            "description": "O exemplo com acentos (Relatório, usuários), separado por ponto e virgula e salvo em Windows-1252. O projeto nao tem a rota GET /users, entao ela entra: 13 importadas e 3 descartadas."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('job concluido', () => pm.expect(r.status).to.eql('COMPLETED'));",
+                  "pm.test('16 lidas, 13 importadas, 3 descartadas', () => {",
+                  "    pm.expect(r.read).to.eql(16);",
+                  "    pm.expect(r.imported).to.eql(13);",
+                  "    pm.expect(r.discarded).to.eql(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. Acentos preservados (Windows-1252)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{batchAccentWindowsProjectId}}/routes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "{{batchAccentWindowsProjectId}}",
+                "routes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const names = pm.response.json().map(route => route.name);",
+                  "pm.test('nomes com acento chegaram iguais ao arquivo', () => {",
+                  "    pm.expect(names).to.include('Relatório de vendas');",
+                  "    pm.expect(names).to.include('Listar usuários');",
+                  "    pm.expect(names).to.include('Criar usuário');",
+                  "});",
+                  "pm.test('nenhum caractere trocado por \\uFFFD', () => pm.expect(names.join()).to.not.include('\\uFFFD'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Limpeza — remover o projeto da importacao com virgula",
           "request": {
             "method": "DELETE",
@@ -3869,9 +4119,67 @@
               }
             }
           ]
+        },
+        {
+          "name": "Limpeza — remover o projeto da importacao com acentos (UTF-8)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{batchAccentUtf8ProjectId}}/purge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "{{batchAccentUtf8ProjectId}}",
+                "purge"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Limpeza — remover o projeto da importacao com acentos (Windows-1252)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{batchAccentWindowsProjectId}}/purge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "{{batchAccentWindowsProjectId}}",
+                "purge"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
         }
       ],
-      "description": "Importacao de rotas por CSV (ADR-014), em dois projetos que a propria pasta cria e remove: roda quantas vezes quiser, em qualquer ordem depois do Fluxo completo (que fornece o clientId).\n\nOs arquivos estao em docs/postman/ do repositorio guarda-chuva: rotas-exemplo.csv (virgula) e rotas-exemplo-ponto-e-virgula.csv. Cada um tem 16 linhas: 12 validas e 4 que o processor descarta (metodo HTTP invalido, linha sem path, rota repetida no arquivo e GET /users, ja cadastrada pelo setup).\n\nArquivo: no Postman, se o campo 'file' aparecer sem arquivo, selecione o CSV em docs/postman/. No newman, use --working-dir docs/postman.\n\nCada execucao fica registrada nas tabelas do Spring Batch: docker compose exec postgres psql -U saas -d permissions_saas -c \"select * from batch_step_execution\""
+      "description": "Importacao de rotas por CSV (ADR-014), em dois projetos que a propria pasta cria e remove: roda quantas vezes quiser, em qualquer ordem depois do Fluxo completo (que fornece o clientId).\n\nOs arquivos estao em docs/postman/ do repositorio guarda-chuva: rotas-exemplo.csv (virgula) e rotas-exemplo-ponto-e-virgula.csv. Cada um tem 16 linhas: 12 validas e 4 que o processor descarta (metodo HTTP invalido, linha sem path, rota repetida no arquivo e GET /users, ja cadastrada pelo setup).\n\nOs passos 7 a 10 conferem o encoding com rotas-exemplo-com-acentos.csv (UTF-8) e rotas-exemplo-com-acentos-windows-1252.csv (o mesmo conteudo, como o Excel salva no Windows): os nomes com acento precisam chegar iguais nos dois.\n\nArquivo: no Postman, se o campo 'file' aparecer sem arquivo, selecione o CSV em docs/postman/. No newman, use --working-dir docs/postman.\n\nCada execucao fica registrada nas tabelas do Spring Batch: docker compose exec postgres psql -U saas -d permissions_saas -c \"select * from batch_step_execution\""
     }
   ]
 }

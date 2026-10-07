@@ -1,0 +1,17 @@
+name;httpMethod;path;description
+Listar pedidos;GET;/orders;Lista os pedidos do cliente
+Criar pedido;post;/orders;Cria um pedido
+Detalhar pedido;GET;orders/{id};Detalhe de um pedido
+Atualizar pedido;PUT; /orders/{id}/ ;Atualiza um pedido
+Cancelar pedido;DELETE;/orders/{id};Cancela um pedido
+Listar produtos;get;/products;
+Criar produto;POST;/products;Cadastra um produto
+Atualizar estoque;PATCH;/products/{id}/stock;Ajusta o estoque
+Listar clientes;GET;/customers;
+Relatório de vendas;GET;/reports/sales;Relatório mensal
+Exportar relatório;FETCH;/reports/export;Metodo HTTP invalido
+Sem caminho;GET;;Linha sem path
+Listar pedidos de novo;GET;/orders;Repetida no proprio arquivo
+Listar usuários;GET;/users;Já existe no projeto do Fluxo completo
+Criar usuário;POST;/users;
+Remover usuário;DELETE;/users/{id};

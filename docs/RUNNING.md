@@ -147,7 +147,7 @@ na fila `audit.events`, e o `audit-service` consome e grava (ADR-013; o formato 
 ## Importação de rotas em lote (Spring Batch)
 
 `POST /projects/{projectId}/routes/import` recebe um CSV (colunas `name`, `httpMethod`, `path` e
-`description`, nessa ordem, separadas por `,` ou `;`) e
+`description`, nessa ordem, separadas por `,` ou `;`, em UTF-8 ou Windows-1252) e
 dispara o job `importRoutesJob`, que lê em lotes de 10, normaliza ou descarta cada linha e grava as
 rotas (ADR-014; regras no [`API.md` da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/API.md)). Use o `projectId` de um projeto existente, por exemplo o
 criado pela pasta `1. Fluxo completo` do Postman:
@@ -160,6 +160,10 @@ curl -F "file=@docs/postman/rotas-exemplo.csv" http://localhost:8080/projects/<p
 O mesmo exemplo com ponto e vírgula, como o Excel em português salva, está em
 `docs/postman/rotas-exemplo-ponto-e-virgula.csv` e dá o mesmo resultado num projeto que ainda não tenha
 essas rotas.
+
+Para conferir os acentos, `docs/postman/rotas-exemplo-com-acentos.csv` está em UTF-8 e
+`docs/postman/rotas-exemplo-com-acentos-windows-1252.csv` tem o mesmo conteúdo em Windows-1252, como o Excel
+salva no Windows. Nos dois, "Relatório de vendas" precisa chegar com o acento.
 
 - **Histórico das execuções:** cada execução fica nas tabelas do Spring Batch, criadas pela migration
   `V11`. Para ver os contadores de cada uma:
@@ -241,7 +245,7 @@ requisição. As pastas rodam de cima para baixo:
 | `3. permission_saas_audit (8081)`  | O `audit-service` chamado direto                                                                  |
 | `4. permission_saas_config (8888)` | A configuração que o Config Server entrega                                                        |
 | `5. RabbitMQ`                      | `Caminho feliz`, `Mensagem invalida vai para a fila de mortas` e `Consumidor fora do ar (manual)` |
-| `6. Spring Batch`                  | A importação de rotas com vírgula e com ponto e vírgula, em projetos que a pasta cria e remove   |
+| `6. Spring Batch`                  | A importação de rotas com vírgula, com ponto e vírgula e com acentos em UTF-8 e Windows-1252, em projetos que a pasta cria e remove |
 
 Para rodar sem abrir o Postman, da raiz do guarda-chuva e com a stack no ar:
 
