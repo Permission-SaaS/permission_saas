@@ -9,7 +9,7 @@ O sistema é **um monolito modular mais serviços extraídos dele**, cada aplica
 | [`permission_saas_api`](https://github.com/Permission-SaaS/permission_saas_api) | `permission-service` | 8080 | A aplicação principal: monolito modular com `identity`, `billing`, `project`, `permission` e o cliente de `audit` | [`docs/ARCHITECTURE.md`](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/ARCHITECTURE.md) |
 | [`permission_saas_audit`](https://github.com/Permission-SaaS/permission_saas_audit) | `audit-service` | 8081 | A trilha de auditoria, com banco próprio | [`docs/ARCHITECTURE.md`](https://github.com/Permission-SaaS/permission_saas_audit/blob/main/docs/ARCHITECTURE.md) |
 | [`permission_saas_config`](https://github.com/Permission-SaaS/permission_saas_config) | `config-server` | 8888 | O Config Server; os arquivos que ele serve ficam no `config-repo/` daqui | [`README.md`](https://github.com/Permission-SaaS/permission_saas_config#readme) |
-| [`permission_saas_front`](https://github.com/Permission-SaaS/permission_saas_front) | — | — | O front-end, ainda sem código: a stack vai ser definida antes da primeira implementação, e ele entra no Docker Compose junto com o código | [`README.md`](https://github.com/Permission-SaaS/permission_saas_front#readme) |
+| [`permission_saas_front`](https://github.com/Permission-SaaS/permission_saas_front) | — | — | O front-end, ainda sem código: React, TypeScript, Vite e Tailwind CSS (ADR-016). Entra no Docker Compose junto com o código | [`README.md`](https://github.com/Permission-SaaS/permission_saas_front#readme) |
 
 A extração segue o padrão *Strangler Fig* — uma capacidade de cada vez, começando pela mais desacoplada — em vez de reescrever o monolito inteiro em serviços. O primeiro serviço extraído foi o `audit` (ADR-008 e ADR-010). Desde a etapa 3 da disciplina de microsserviços, o `config-server` serve a configuração de ambiente dos dois serviços no profile `prod` (ADR-011 e ADR-012), e as aplicações sobem juntas pelo Docker Compose, com um banco por serviço e o RabbitMQ.
 
@@ -765,3 +765,24 @@ mas nenhuma versão fica registrada: reproduzir uma entrega exigiria a mesma tag
   intactas, e as entregas futuras ganham tag neste repositório, que fixa todas as aplicações de uma vez.
 - O `docs/DER.pdf` fica aqui porque desenha o modelo do sistema inteiro, de antes da separação dos
   bancos.
+
+---
+
+## ADR-016: o front-end usa React, TypeScript, Vite e Tailwind CSS, e não o Create React App
+
+**Status:** aceito em 07/10/2026, no início da disciplina de Desenvolvimento de aplicações interativas
+com React.
+
+**Contexto:** a disciplina pede um CRUD em React. O `permission_saas_front` existe desde o ADR-015,
+ainda sem stack. O item 2 da rubrica pergunta se a aplicação foi criada com o Create React App (CRA),
+mas o time do React descontinuou o CRA em 14/02/2025, e ele não recebe mais manutenção.
+
+**Decisão:**
+
+- **React** na versão mais recente (19.3 em 07/10/2026);
+- **TypeScript**;
+- **Vite** como ferramenta de build, no lugar do CRA;
+- **Tailwind CSS** para os estilos.
+
+**Consequência:** o item 2 da rubrica não é seguido ao pé da letra, e o relatório da disciplina cita
+esta decisão.

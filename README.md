@@ -477,7 +477,7 @@ Cada aplicação documenta o próprio interior no seu repositório:
 | [`permission_saas_api`](https://github.com/Permission-SaaS/permission_saas_api)       | `ARCHITECTURE.md` (módulos e camadas), `DOMAIN.md`, `API.md`, `PATTERNS.md` e `TEST-ARCHITECTURE.md`, em `docs/` |
 | [`permission_saas_audit`](https://github.com/Permission-SaaS/permission_saas_audit)     | `ARCHITECTURE.md`, `DOMAIN.md` e `API.md` (endpoints e contrato da fila), em `docs/`                              |
 | [`permission_saas_config`](https://github.com/Permission-SaaS/permission_saas_config)    | `README.md`                                                                                                       |
-| [`permission_saas_front`](https://github.com/Permission-SaaS/permission_saas_front)      | `README.md` (front-end, stack a definir)                                                                          |
+| [`permission_saas_front`](https://github.com/Permission-SaaS/permission_saas_front)      | `README.md` (front-end em React, TypeScript, Vite e Tailwind CSS, ainda sem código)                               |
 
 O que é específico de uma disciplina — enunciado e planejamento — fica na pasta dela,
 listada em [Evolução](#evolução).
