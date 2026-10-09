@@ -55,7 +55,7 @@ permission_saas/                guarda-chuva (este repositório)
 ├── permission_saas_api/        submódulo: aplicação principal (monolito modular)
 ├── permission_saas_audit/      submódulo: trilha de auditoria extraída como serviço
 ├── permission_saas_config/     submódulo: configuração centralizada (Spring Cloud Config)
-├── permission_saas_front/      submódulo: front-end, ainda sem código
+├── permission_saas_front/      submódulo: front-end, ainda sem funcionalidades
 ├── config-repo/                os arquivos de configuração que o config-server serve
 ├── docker-compose.yml          orquestra as aplicações e os bancos
 ├── docker/                     script de inicialização do Postgres da aplicação principal
@@ -477,7 +477,7 @@ Cada aplicação documenta o próprio interior no seu repositório:
 | [`permission_saas_api`](https://github.com/Permission-SaaS/permission_saas_api)       | `ARCHITECTURE.md` (módulos e camadas), `DOMAIN.md`, `API.md`, `PATTERNS.md` e `TEST-ARCHITECTURE.md`, em `docs/` |
 | [`permission_saas_audit`](https://github.com/Permission-SaaS/permission_saas_audit)     | `ARCHITECTURE.md`, `DOMAIN.md` e `API.md` (endpoints e contrato da fila), em `docs/`                              |
 | [`permission_saas_config`](https://github.com/Permission-SaaS/permission_saas_config)    | `README.md`                                                                                                       |
-| [`permission_saas_front`](https://github.com/Permission-SaaS/permission_saas_front)      | `README.md` (front-end em React, TypeScript, Vite e Tailwind CSS, ainda sem código)                               |
+| [`permission_saas_front`](https://github.com/Permission-SaaS/permission_saas_front)      | `README.md` (front-end em React, TypeScript, Vite e Tailwind CSS, ainda sem funcionalidades)                       |
 
 O que é específico de uma disciplina — enunciado e planejamento — fica na pasta dela,
 listada em [Evolução](#evolução).

@@ -61,6 +61,7 @@ projetos. Papéis e rotas ficam de fora nesta disciplina. Com isso, entram no es
 | Estado | React Query para os dados da API, Redux Toolkit para a sessão, Context para as notificações | Cada um resolve um problema diferente, o que é o texto do item 12 da rubrica |
 | Componente de classe | `ErrorBoundary` | No React 19, ainda só existe como classe |
 | Estilos | Tailwind v4, com o plugin `@tailwindcss/vite` | O item 11 cita Styled Components, MUI e CSS Modules como exemplos; o Tailwind é equivalente |
+| Linter | **ESLint** (decidido em 08/10), no lugar do Oxlint, que é o padrão do template | É o que a maioria dos projetos usa. Vem com o plugin de hooks do time do React, que já liga `rules-of-hooks` e `exhaustive-deps` |
 | `clientId` antes do JWT | `VITE_DEV_CLIENT_ID` no `.env.local`, removida no bloco 5 | O `POST /projects` exige `clientId`, e ainda não haverá sessão |
 
 ---
@@ -170,7 +171,11 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
   - **Do zero:** Redux e React Query, com explicação completa antes de codar (blocos 3 e 5).
   - **Ajuste:** o bloco 1 começa com o modelo mental de render, usando o contador do próprio template
     do Vite.
-- [ ] **Bloco 0:** criar o projeto com o Vite ← próximo passo
+- [ ] **Bloco 0:**
+  - [x] Projeto criado com o Vite (08/10): `create-vite` 9.2.1, template `react-ts`, ESLint; build e lint
+    passando; README com como rodar
+  - [ ] Tailwind ← próximo passo
+  - [ ] Limpeza do template e estrutura de pastas, documentada no README
 
 ---
 
@@ -187,6 +192,8 @@ Ferramenta: **Claude Code**, da Anthropic.
 |---|---|---|
 | 07/10/2026 | Enunciado e plano | Formatou o enunciado em Markdown e o separou por etapa; confrontou o enunciado com a rubrica; ajudou a montar este plano e a estrutura de pastas. As decisões de escopo, stack e ordem foram minhas |
 | 07/10/2026 | Diagnóstico | Questionário de conceitos (JS, React, TypeScript, bibliotecas) e correção comentada das minhas respostas |
+| 08/10/2026 | Bloco 0 | Explicou o comando de criação do projeto e a diferença entre Oxlint e ESLint; a escolha do ESLint foi minha |
+| 08/10/2026 | Bloco 0 | Explicou os arquivos gerados pelo template. A meu pedido, juntou as regras do `.gitignore`, escreveu o README com como rodar e fez os commits. O projeto foi criado por mim |
 
 ---
 
@@ -202,7 +209,7 @@ POSTGRES_HOST_PORT=5434 docker compose up -d postgres audit-postgres rabbitmq
 # front (no permission_saas_front)
 npm run dev      # fluxo no navegador
 npm run build    # roda o tsc -b: erro de tipo quebra o build
-npm run lint     # oxlint, que vem no template do Vite
+npm run lint     # ESLint
 ```
 
 - **Bloco 4:** `./mvnw test` no `permission_saas_api` e a coleção do Postman pelo newman, já com o
