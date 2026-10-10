@@ -62,6 +62,7 @@ projetos. Papéis e rotas ficam de fora nesta disciplina. Com isso, entram no es
 | Componente de classe | `ErrorBoundary` | No React 19, ainda só existe como classe |
 | Estilos | Tailwind v4, com o plugin `@tailwindcss/vite` | O item 11 cita Styled Components, MUI e CSS Modules como exemplos; o Tailwind é equivalente |
 | Linter | **ESLint** (decidido em 08/10), no lugar do Oxlint, que é o padrão do template | É o que a maioria dos projetos usa. Vem com o plugin de hooks do time do React, que já liga `rules-of-hooks` e `exhaustive-deps` |
+| Formatador | **Prettier** (decidido em 10/10), com as regras padrão escritas no `.prettierrc` e o plugin oficial do Tailwind, que ordena as classes | O formato fica definido no projeto, e não no editor de cada um. O `npm run format:check` confere |
 | `clientId` antes do JWT | `VITE_DEV_CLIENT_ID` no `.env.local`, removida no bloco 5 | O `POST /projects` exige `clientId`, e ainda não haverá sessão |
 
 ---
@@ -155,7 +156,7 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
 
 ---
 
-## Situação (atualizado em 07/10/2026)
+## Situação (atualizado em 10/10/2026)
 
 - [x] Enunciado separado em `README.md` e `ETAPA1..3.md`
 - [x] Stack decidida e registrada (ADR-016)
@@ -174,8 +175,12 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
 - [ ] **Bloco 0:**
   - [x] Projeto criado com o Vite (08/10): `create-vite` 9.2.1, template `react-ts`, ESLint; build e lint
     passando; README com como rodar
-  - [ ] Tailwind ← próximo passo
-  - [ ] Limpeza do template e estrutura de pastas, documentada no README
+  - [x] Tailwind v4.3 com o plugin `@tailwindcss/vite` (10/10)
+  - [x] Prettier com o plugin do Tailwind e `.vscode/extensions.json` (10/10)
+  - [x] Limpeza do template: a página de demonstração deu lugar a uma página provisória (10/10)
+  - [ ] Estrutura de pastas: nasce com os primeiros arquivos do bloco 1, porque pasta só existe quando
+    tem arquivo; o README documenta a árvore conforme ela cresce
+- [ ] **Bloco 1** ← próximo passo, começando pelo modelo mental de render
 
 ---
 
@@ -194,6 +199,8 @@ Ferramenta: **Claude Code**, da Anthropic.
 | 07/10/2026 | Diagnóstico | Questionário de conceitos (JS, React, TypeScript, bibliotecas) e correção comentada das minhas respostas |
 | 08/10/2026 | Bloco 0 | Explicou o comando de criação do projeto e a diferença entre Oxlint e ESLint; a escolha do ESLint foi minha |
 | 08/10/2026 | Bloco 0 | Explicou os arquivos gerados pelo template. A meu pedido, juntou as regras do `.gitignore`, escreveu o README com como rodar e fez os commits. O projeto foi criado por mim |
+| 10/10/2026 | Bloco 0 | Explicou a abordagem *utility-first* do Tailwind e revisou a instalação, que fiz seguindo o guia oficial |
+| 10/10/2026 | Bloco 0 | Propôs a configuração do Prettier, que instalei e configurei; revisou a limpeza do template e apontou o import do `App.css` apagado. A meu pedido, criou o `.vscode/extensions.json`, ajustou o `.gitignore` e o README e fez os commits |
 
 ---
 
