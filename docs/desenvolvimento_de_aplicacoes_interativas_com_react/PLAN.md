@@ -63,6 +63,8 @@ projetos. Papéis e rotas ficam de fora nesta disciplina. Com isso, entram no es
 | Estilos | Tailwind v4, com o plugin `@tailwindcss/vite` | O item 11 cita Styled Components, MUI e CSS Modules como exemplos; o Tailwind é equivalente |
 | Linter | **ESLint** (decidido em 08/10), no lugar do Oxlint, que é o padrão do template | É o que a maioria dos projetos usa. Vem com o plugin de hooks do time do React, que já liga `rules-of-hooks` e `exhaustive-deps` |
 | Formatador | **Prettier** (decidido em 10/10), com as regras padrão escritas no `.prettierrc` e o plugin oficial do Tailwind, que ordena as classes | O formato fica definido no projeto, e não no editor de cada um. O `npm run format:check` confere |
+| Roteamento | **React Router 8 no modo declarativo** (decidido em 14/10): `<BrowserRouter>`, `<Routes>` e `<Route>` | O modo data traria *loaders* e *actions*, que repetem o papel do React Query, e captura sozinho os erros de render das rotas, que nunca chegariam ao `ErrorBoundary`. Se um dia precisar, o React Router tem um guia oficial de migração para o modo data |
+| Idioma | **Interface em português, código em inglês** (decidido em 14/10) | Os prints vão para o relatório, e o relatório e a documentação estão em português. Nomes, arquivos, URLs e commits seguem em inglês, como no back-end |
 | `clientId` antes do JWT | `VITE_DEV_CLIENT_ID` no `.env.local`, removida no bloco 5 | O `POST /projects` exige `clientId`, e ainda não haverá sessão |
 
 ---
@@ -121,7 +123,7 @@ permission_saas_front/
   - Um módulo só importa outro pelo `index.ts` dele, a mesma ideia das fronteiras do Spring Modulith no
     back-end.
 - **Pasta só existe quando tem arquivo**, até porque o git não guarda pasta vazia. A árvore fica
-  documentada no README do front.
+  documentada no `docs/ARCHITECTURE.md` do front, junto com as convenções de código.
 - **Um componente nasce dentro do módulo** e só vai para o `shared` quando um segundo módulo precisar
   dele.
 - **O token chega ao `httpClient` pelo `app`** (bloco 5), para o `shared` não depender do `identity`.
@@ -135,8 +137,8 @@ permission_saas_front/
 | 0. Diagnóstico e estrutura | 08–09/10 | questionário; `npm create vite@latest` (template `react-ts`) no `permission_saas_front`; tour pelos arquivos gerados; Tailwind; `.gitignore` (`node_modules`, `dist`); README com como rodar e a estrutura | 2, 4, 11 |
 | 1. Base | 10–13/10 | `httpClient` (prefixo `/api`, conversão do `ErrorResponse` da API, timeout com `Promise.race`, `signal`); proxy do Vite; layout; React Router com as rotas ainda vazias; `NotificationContext`; `ErrorBoundary` | 3, 6, 14 |
 | 2. Cadastro | 14–16/10 | `RegisterPage`; formulário controlado com o hook `useForm`; validação; `POST /clients/register`; tratamento do 409 (e-mail em uso) e do 400; mensagem de sucesso ou erro na tela | 5, 7, 13, 14 |
-| 3. CRUD de projetos | 17–23/10 | React Query (consultas e mutações, cache invalidado depois de cada mudança); telas de lista, detalhe e formulário (criar e editar usam o mesmo formulário); componentes reutilizáveis com props; busca por nome com debounce e `AbortController`; confirmação de exclusão com template literal | 5, 7, 8, 13, 15, 16 |
-| 4. JWT no back-end | 24–28/10 | `POST /auth/login` no `identity`: confere a senha em bcrypt e gera o token (o `jjwt` já está no `pom.xml`, sem uso); filtro do token Bearer; `/projects/**` passa a exigir login, enquanto `/validate-permission`, `/clients/register` e o Swagger (Basic) continuam como estão; cada cliente só vê os próprios projetos; Postman com o passo de login; `API.md` e ADR-017 | nenhum (sustenta a rota privada) |
+| 3. CRUD de projetos | 17–23/10 | React Query (consultas e mutações, cache invalidado depois de cada mudança); telas de lista, detalhe e formulário (criar e editar usam o mesmo formulário); componentes reutilizáveis com props; busca por nome com debounce e `AbortController`; confirmação de exclusão com template literal; o front valida o que der antes de chamar a API (formulário, e `id` da URL fora do formato UUID vira "projeto não encontrado") | 5, 7, 8, 13, 15, 16 |
+| 4. JWT no back-end | 24–28/10 | `POST /auth/login` no `identity`: confere a senha em bcrypt e gera o token (o `jjwt` já está no `pom.xml`, sem uso); filtro do token Bearer; `/projects/**` passa a exigir login, enquanto `/validate-permission`, `/clients/register` e o Swagger (Basic) continuam como estão; cada cliente só vê os próprios projetos; UUID inválido no caminho passa a dar 400 (hoje cai no tratamento genérico do `GlobalExceptionHandler` e vira 500); Postman com o passo de login; `API.md` e ADR-017 | nenhum (sustenta a rota privada) |
 | 5. Login, Redux e rota privada | 29–31/10 | `store` e `authSlice` (actions e reducers); `useSelector` e `useDispatch`; `LoginForm` **não controlado**; `PrivateRoute`; logout; token no `httpClient`; remoção do `VITE_DEV_CLIENT_ID` | 9, 10, 12 |
 | 6. Fechamento | 01–03/11 | teste no Chrome, no Firefox e no Edge; revisão dos comentários; screenshots; relatório com os 9 itens e o registro de uso de IA, citando a liberação do professor e o ADR-016 | 1, 3 |
 | Folga | 04–08/11 | atrasos; entrega até 09/11 | — |
@@ -156,7 +158,7 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
 
 ---
 
-## Situação (atualizado em 10/10/2026)
+## Situação (atualizado em 14/10/2026)
 
 - [x] Enunciado separado em `README.md` e `ETAPA1..3.md`
 - [x] Stack decidida e registrada (ADR-016)
@@ -172,15 +174,24 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
   - **Do zero:** Redux e React Query, com explicação completa antes de codar (blocos 3 e 5).
   - **Ajuste:** o bloco 1 começa com o modelo mental de render, usando o contador do próprio template
     do Vite.
-- [ ] **Bloco 0:**
+- [x] **Bloco 0:**
   - [x] Projeto criado com o Vite (08/10): `create-vite` 9.2.1, template `react-ts`, ESLint; build e lint
     passando; README com como rodar
   - [x] Tailwind v4.3 com o plugin `@tailwindcss/vite` (10/10)
   - [x] Prettier com o plugin do Tailwind e `.vscode/extensions.json` (10/10)
   - [x] Limpeza do template: a página de demonstração deu lugar a uma página provisória (10/10)
-  - [ ] Estrutura de pastas: nasce com os primeiros arquivos do bloco 1, porque pasta só existe quando
-    tem arquivo; o README documenta a árvore conforme ela cresce
-- [ ] **Bloco 1** ← próximo passo, começando pelo modelo mental de render
+  - [x] Estrutura de pastas: nasceu com o router (14/10). A árvore e as convenções de código ficam no
+    `docs/ARCHITECTURE.md` do front (15/10), que cresce junto com o código
+- [ ] **Bloco 1** ← em andamento. Ordem decidida em 12/10: primeiro o que aparece na tela; o `httpClient`,
+  que não tem tela e só é usado no bloco 2, fica por último
+  - [x] Modelo mental de render, com experimentos descartáveis no contador do `App.tsx` (12–14/10): o que
+    dispara um render, o state como foto do render, a fila de updates (valor × função), `StrictMode`,
+    imutabilidade e referência (`Object.is`)
+  - [x] React Router e layout (14–15/10): modo declarativo, `AppLayout` com `Outlet`, rotas do CRUD com
+    páginas provisórias e o 404
+  - [ ] `ErrorBoundary` ← próximo passo
+  - [ ] `NotificationContext`
+  - [ ] Proxy do Vite e `httpClient`
 
 ---
 
@@ -201,6 +212,8 @@ Ferramenta: **Claude Code**, da Anthropic.
 | 08/10/2026 | Bloco 0 | Explicou os arquivos gerados pelo template. A meu pedido, juntou as regras do `.gitignore`, escreveu o README com como rodar e fez os commits. O projeto foi criado por mim |
 | 10/10/2026 | Bloco 0 | Explicou a abordagem *utility-first* do Tailwind e revisou a instalação, que fiz seguindo o guia oficial |
 | 10/10/2026 | Bloco 0 | Propôs a configuração do Prettier, que instalei e configurei; revisou a limpeza do template e apontou o import do `App.css` apagado. A meu pedido, criou o `.vscode/extensions.json`, ajustou o `.gitignore` e o README e fez os commits |
+| 12–14/10/2026 | Bloco 1 | Explicou o modelo de render (o que dispara um render, o state como foto, a fila de updates, `StrictMode`, imutabilidade) com um exemplo fora do projeto, propôs os experimentos e revisou minhas previsões e respostas. Sugeriu a ordem do bloco 1, que aceitei. Escrevi os experimentos e os descartei |
+| 14–15/10/2026 | Bloco 1 | Explicou o React Router (os três modos, rotas aninhadas, layout com `Outlet`, `useParams`, `Navigate` e `NavLink`) com um exemplo fora do projeto e revisou as rotas e o layout que escrevi; ao responder uma pergunta de fixação, apontou que a API devolve 500 para um UUID inválido. O modo declarativo e o português na interface foram escolhas minhas. A meu pedido, criou o `docs/ARCHITECTURE.md` do front com a estrutura de pastas e as convenções de código e atualizou o README |
 
 ---
 
