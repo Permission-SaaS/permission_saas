@@ -60,6 +60,7 @@ projetos. Papéis e rotas ficam de fora nesta disciplina. Com isso, entram no es
 | HTTP | **`fetch`** com um wrapper próprio (`httpClient`) | O timeout com `Promise.race` e o `AbortController` aparecem naturalmente; o Axios esconderia os dois |
 | Estado | React Query para os dados da API, Redux Toolkit para a sessão, Context para as notificações | Cada um resolve um problema diferente, o que é o texto do item 12 da rubrica |
 | Componente de classe | `ErrorBoundary` | No React 19, ainda só existe como classe |
+| Error boundary | **Escrito à mão** (decidido em 16/10), no `shared/components`, em vez da lib `react-error-boundary` | Com a lib, a classe ficaria no `node_modules`, e o item 6 da rubrica pede componente de classe no meu código; escrever também ensina o que a lib faz por dentro. Em produção, a lib seria a escolha (`resetKeys`, `onReset`, `showBoundary` para erros assíncronos); a troca fica possível depois da entrega e entra nas considerações finais do relatório |
 | Estilos | Tailwind v4, com o plugin `@tailwindcss/vite` | O item 11 cita Styled Components, MUI e CSS Modules como exemplos; o Tailwind é equivalente |
 | Linter | **ESLint** (decidido em 08/10), no lugar do Oxlint, que é o padrão do template | É o que a maioria dos projetos usa. Vem com o plugin de hooks do time do React, que já liga `rules-of-hooks` e `exhaustive-deps` |
 | Formatador | **Prettier** (decidido em 10/10), com as regras padrão escritas no `.prettierrc` e o plugin oficial do Tailwind, que ordena as classes | O formato fica definido no projeto, e não no editor de cada um. O `npm run format:check` confere |
@@ -158,7 +159,7 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
 
 ---
 
-## Situação (atualizado em 14/10/2026)
+## Situação (atualizado em 19/10/2026)
 
 - [x] Enunciado separado em `README.md` e `ETAPA1..3.md`
 - [x] Stack decidida e registrada (ADR-016)
@@ -189,8 +190,10 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
     imutabilidade e referência (`Object.is`)
   - [x] React Router e layout (14–15/10): modo declarativo, `AppLayout` com `Outlet`, rotas do CRUD com
     páginas provisórias e o 404
-  - [ ] `ErrorBoundary` ← próximo passo
-  - [ ] `NotificationContext`
+  - [x] `ErrorBoundary` (16–19/10): componente de classe no `shared`, em volta da área de páginas (recriado a
+    cada rota pela `key`) e do app inteiro, com requisitos e experimentos de previsão. No caminho: alias `@/` e
+    as convenções novas no `docs/ARCHITECTURE.md` do front
+  - [ ] `NotificationContext` ← próximo passo
   - [ ] Proxy do Vite e `httpClient`
 
 ---
@@ -214,6 +217,8 @@ Ferramenta: **Claude Code**, da Anthropic.
 | 10/10/2026 | Bloco 0 | Propôs a configuração do Prettier, que instalei e configurei; revisou a limpeza do template e apontou o import do `App.css` apagado. A meu pedido, criou o `.vscode/extensions.json`, ajustou o `.gitignore` e o README e fez os commits |
 | 12–14/10/2026 | Bloco 1 | Explicou o modelo de render (o que dispara um render, o state como foto, a fila de updates, `StrictMode`, imutabilidade) com um exemplo fora do projeto, propôs os experimentos e revisou minhas previsões e respostas. Sugeriu a ordem do bloco 1, que aceitei. Escrevi os experimentos e os descartei |
 | 14–15/10/2026 | Bloco 1 | Explicou o React Router (os três modos, rotas aninhadas, layout com `Outlet`, `useParams`, `Navigate` e `NavLink`) com um exemplo fora do projeto e revisou as rotas e o layout que escrevi; ao responder uma pergunta de fixação, apontou que a API devolve 500 para um UUID inválido. O modo declarativo e o português na interface foram escolhas minhas. A meu pedido, criou o `docs/ARCHITECTURE.md` do front com a estrutura de pastas e as convenções de código e atualizou o README |
+| 16–17/10/2026 | Bloco 1 | Explicou error boundaries e componentes de classe com um exemplo fora do projeto; como tech lead, avaliou a lib `react-error-boundary` contra escrever o componente, e a decisão de escrever foi minha; a meu pedido, passou os requisitos do `ErrorBoundary` sem código e revisou minhas respostas e previsões. Também a meu pedido, configurou o alias `@/` (`tsconfig.app.json` e `vite.config.ts`), trocou os imports que atravessam pastas e registrou a convenção, que aprovei |
+| 19/10/2026 | Bloco 1 | Revisou o `ErrorBoundary` que escrevi, item por item do checklist, e explicou os erros que encontrei no caminho: o `this` perdido em método passado como callback, a mutação do state na classe e o erro de handler que o boundary não captura. Pesquisou na documentação do React qual padrão de handler em classe é o recomendado; a escolha foi minha. A meu pedido, criou o checklist do passo, organizou as pendências e registrou as convenções que aprovei (prefixo `on`, barrel do `shared`, `??`, modificadores explícitos, dado fixo fora do componente, tipos e pastas de componente). Também ajudou a acessar o servidor de dev pela rede da empresa, com o navegador integrado do VS Code |
 
 ---
 
