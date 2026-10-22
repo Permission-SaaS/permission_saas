@@ -159,7 +159,7 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
 
 ---
 
-## Situação (atualizado em 19/10/2026)
+## Situação (atualizado em 22/10/2026)
 
 - [x] Enunciado separado em `README.md` e `ETAPA1..3.md`
 - [x] Stack decidida e registrada (ADR-016)
@@ -193,8 +193,11 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
   - [x] `ErrorBoundary` (16–19/10): componente de classe no `shared`, em volta da área de páginas (recriado a
     cada rota pela `key`) e do app inteiro, com requisitos e experimentos de previsão. No caminho: alias `@/` e
     as convenções novas no `docs/ARCHITECTURE.md` do front
-  - [ ] `NotificationContext` ← próximo passo
-  - [ ] Proxy do Vite e `httpClient`
+  - [x] `NotificationContext` (20–22/10): contexto, provider e hook no `shared`, com o valor estável
+    (`useCallback` + `useMemo`) e um componente por aviso com o próprio timer; o provider entra pelo
+    `app/providers.tsx`, dentro do `ErrorBoundary` de fora e fora do `BrowserRouter`. Requisitos e
+    experimentos de previsão; as convenções do Context no `docs/ARCHITECTURE.md` do front
+  - [ ] Proxy do Vite e `httpClient` ← próximo passo
 
 ---
 
@@ -219,6 +222,7 @@ Ferramenta: **Claude Code**, da Anthropic.
 | 14–15/10/2026 | Bloco 1 | Explicou o React Router (os três modos, rotas aninhadas, layout com `Outlet`, `useParams`, `Navigate` e `NavLink`) com um exemplo fora do projeto e revisou as rotas e o layout que escrevi; ao responder uma pergunta de fixação, apontou que a API devolve 500 para um UUID inválido. O modo declarativo e o português na interface foram escolhas minhas. A meu pedido, criou o `docs/ARCHITECTURE.md` do front com a estrutura de pastas e as convenções de código e atualizou o README |
 | 16–17/10/2026 | Bloco 1 | Explicou error boundaries e componentes de classe com um exemplo fora do projeto; como tech lead, avaliou a lib `react-error-boundary` contra escrever o componente, e a decisão de escrever foi minha; a meu pedido, passou os requisitos do `ErrorBoundary` sem código e revisou minhas respostas e previsões. Também a meu pedido, configurou o alias `@/` (`tsconfig.app.json` e `vite.config.ts`), trocou os imports que atravessam pastas e registrou a convenção, que aprovei |
 | 19/10/2026 | Bloco 1 | Revisou o `ErrorBoundary` que escrevi, item por item do checklist, e explicou os erros que encontrei no caminho: o `this` perdido em método passado como callback, a mutação do state na classe e o erro de handler que o boundary não captura. Pesquisou na documentação do React qual padrão de handler em classe é o recomendado; a escolha foi minha. A meu pedido, criou o checklist do passo, organizou as pendências e registrou as convenções que aprovei (prefixo `on`, barrel do `shared`, `??`, modificadores explícitos, dado fixo fora do componente, tipos e pastas de componente). Também ajudou a acessar o servidor de dev pela rede da empresa, com o navegador integrado do VS Code |
+| 20–22/10/2026 | Bloco 1 | Explicou a Context API com analogias e exemplos fora do projeto: as três peças, por que os `children` do provider não renderizam de novo, o custo do prop drilling, `useCallback` e `useMemo`, e o `crypto.randomUUID`. Revisou o contexto, o provider, o hook e o toast que escrevi, e apontou a causa do loop infinito (o `notify` chamado no corpo do componente) e a do timer que reiniciava (um timer só, no provider, em vez de um por aviso). A meu pedido, fez o visual do toast (cores e ícones por tipo, animação de entrada e o container que não bloqueia cliques), estreitou o tipo do `role`, corrigiu um import e um acento, removeu os botões de teste e registrou as convenções que aprovei (comandos sem `handle`, o padrão do Context, arquivo sem JSX em `.ts`). A lógica (o state, os comandos, o timer por aviso e a guarda do hook) foi minha. Também revisou minhas previsões dos experimentos |
 
 ---
 
