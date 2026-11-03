@@ -168,7 +168,7 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
 
 ---
 
-## Situação (atualizado em 01/11/2026)
+## Situação (atualizado em 03/11/2026)
 
 - [x] Enunciado separado em `README.md` e `ETAPA1..3.md`
 - [x] Stack decidida e registrada (ADR-016)
@@ -218,7 +218,15 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
         cache e o `QueryClient`) e a página com carregando, erro, vazio e a lista; experimentos do cache
         ao trocar de página, da busca ao voltar o foco e da API parada. No caminho: o organizador de
         imports no Prettier e o `npm run check`
-  - [ ] Busca por nome com debounce e `AbortController` ← próximo passo
+  - [x] Busca com debounce (02–03/11): o hook `useDebounce` no `shared`, a busca por nome e o filtro de
+        status na chave da query, com o `signal` cancelando a busca velha pelo `AbortSignal.any`; o
+        `ProjectList` e o `ProjectCard` por props, em cima de um `Card` no `shared`, e a data formatada
+        com o `Intl`. Requisitos, perguntas e experimentos de previsão (com o debounce, sem a limpeza do
+        effect e sem o hook no 3G lento); as convenções de filtros e de debounce e a de peça visual no
+        `docs/ARCHITECTURE.md` do front
+  - [ ] Detalhe do projeto ← próximo passo
+  - [ ] Formulário de criar e editar, com o `useForm`, e os avisos de sucesso e erro
+  - [ ] Exclusão com confirmação
 
 ---
 
@@ -247,6 +255,7 @@ Ferramenta: **Claude Code**, da Anthropic.
 | 22–28/10/2026    | Bloco 1           | Explicou o proxy do Vite, a origem e o CORS, e o que o `fetch` faz e não faz (erro HTTP × falha de rede, corpo lido uma vez, timeout, `AbortController`) com analogias, e comparou o `fetch` com o Axios; a escolha do `fetch` foi minha. A meu pedido, passou os requisitos do `httpClient` sem código e revisou minhas respostas e previsões. Diagnosticou por que a API não subia (o banco do container estava na 5434 e a API procurava na 5432) e por que o `/api/ping` não abria no navegador do VS Code (o cabeçalho `X-Frame-Options` do Spring Security), testando os endereços com `curl`; o proxy foi escrito por mim. Avaliou o cronograma em 22/10 e em 28/10 e propôs cortes: em 22/10 mantive o plano; em 28/10 aceitei o corte do JWT (a regra do plano), o do cadastro, menos experimentos por passo e a IA escrevendo a parte estrutural                                                                                 |
 | 28/10–01/11/2026 | Bloco 1           | Na divisão combinada em 28/10, escreveu a classe `HttpError` (o tipo do erro e os campos) e os tipos `ErrorResponse` e `RequestOptions`. Explicou o `AbortSignal.any` e a Promise do relógio no `Promise.race` com exemplos fora do projeto, quando travei, e revisou o `httpClient` que escrevi (barra dupla no caminho, Promise que abortava ao ser criada, `throw` num listener, 204 e corpo de erro sem JSON, cancelamento classificado pelo nome do erro). A meu pedido, escreveu a leitura da mensagem de erro com mensagem genérica quando o corpo não é o `ErrorResponse`. Também a meu pedido, montou a página temporária com os botões dos experimentos. Revisou os resultados dos experimentos e, a meu pedido, fechou o passo: removeu a página temporária, conferiu build, lint e formatação e registrou as convenções que aprovei. O `request`, o `Promise.race`, a junção dos sinais e a classificação dos erros foram meus |
 | 01/11/2026       | Bloco 3           | Na divisão combinada em 28/10, escreveu a parte estrutural do CRUD: os tipos dos DTOs de projeto, as funções de chamada da API (`projectApi.ts`), as chaves de cache (`projectKeys.ts`) e o `QueryClient` com o `QueryClientProvider`. Explicou o React Query com analogias e um exemplo fora do projeto e passou os requisitos da lista sem código. A meu pedido, configurou o plugin que organiza os imports no Prettier e o script `check` (build, lint e formatação num comando só); revisou os experimentos da lista e, a meu pedido, conferiu as requisições num Chrome sem tela, pelo protocolo de depuração, e escreveu a mensagem de erro da lista escolhida pelo `kind`. A lista e as instalações foram minhas                                                                                                                                                                                                                   |
+| 02–03/11/2026    | Bloco 3           | Explicou o debounce com uma analogia e um exemplo fora do projeto e passou os requisitos sem código. Revisou o hook e a página (o objeto novo na dependência do effect, que renderizava sem parar; o `false` no `onlyActive`, que trazia só os inativos; o `??` no lugar do `&&`) e explicou o eixo do flex e as margens automáticas. Sugeriu o select de status no lugar do checkbox e o `Intl.DateTimeFormat`, com o trecho de `formatDateTime`. A meu pedido, escreveu o componente `Card` do `shared` e as partes dele e as classes do Tailwind da lista, do card e da página, levando a grade para fora do `map` do `ProjectList`, e tirou uma anotação de tipo que sobrava no hook. Revisou os experimentos e as perguntas e criou o checklist do passo. O hook, a página, a lista, o `ProjectCard` e o select foram meus                                                                                                            |
 
 ---
 
