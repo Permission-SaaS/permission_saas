@@ -168,7 +168,7 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
 
 ---
 
-## Situação (atualizado em 03/11/2026)
+## Situação (atualizado em 04/11/2026)
 
 - [x] Enunciado separado em `README.md` e `ETAPA1..3.md`
 - [x] Stack decidida e registrada (ADR-016)
@@ -224,9 +224,15 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
         com o `Intl`. Requisitos, perguntas e experimentos de previsão (com o debounce, sem a limpeza do
         effect e sem o hook no 3G lento); as convenções de filtros e de debounce e a de peça visual no
         `docs/ARCHITECTURE.md` do front
-  - [ ] Detalhe do projeto ← próximo passo
-  - [ ] Formulário de criar e editar, com o `useForm`, e os avisos de sucesso e erro
-  - [ ] Exclusão com confirmação
+  - [x] Detalhe e exclusão do projeto (04/11): a página valida o `id` e o `ProjectDetail` busca, com
+        "não encontrado" para o `id` fora do formato, sem requisição, e para o 404; a exclusão por
+        `useMutation`, confirmada num `Modal` no `shared` digitando o nome do projeto, com a mensagem em
+        template literal e o cache invalidado no sucesso. Um 404 na exclusão volta para a lista, e os
+        outros erros avisam e ficam na página. O `modules/identity` provisório (`LoginPage` e
+        `RegisterPage`) saiu, com os links e as rotas; o login simulado volta no bloco dele. Requisitos,
+        perguntas e experimentos de previsão (`id` inválido, exclusão no 3G lento e duas abas); as
+        convenções de callback de hook e de modal no `docs/ARCHITECTURE.md` do front
+  - [ ] Formulário de criar e editar, com o `useForm`, e os avisos de sucesso e erro ← próximo passo
 
 ---
 
@@ -256,6 +262,7 @@ Ferramenta: **Claude Code**, da Anthropic.
 | 28/10–01/11/2026 | Bloco 1           | Na divisão combinada em 28/10, escreveu a classe `HttpError` (o tipo do erro e os campos) e os tipos `ErrorResponse` e `RequestOptions`. Explicou o `AbortSignal.any` e a Promise do relógio no `Promise.race` com exemplos fora do projeto, quando travei, e revisou o `httpClient` que escrevi (barra dupla no caminho, Promise que abortava ao ser criada, `throw` num listener, 204 e corpo de erro sem JSON, cancelamento classificado pelo nome do erro). A meu pedido, escreveu a leitura da mensagem de erro com mensagem genérica quando o corpo não é o `ErrorResponse`. Também a meu pedido, montou a página temporária com os botões dos experimentos. Revisou os resultados dos experimentos e, a meu pedido, fechou o passo: removeu a página temporária, conferiu build, lint e formatação e registrou as convenções que aprovei. O `request`, o `Promise.race`, a junção dos sinais e a classificação dos erros foram meus |
 | 01/11/2026       | Bloco 3           | Na divisão combinada em 28/10, escreveu a parte estrutural do CRUD: os tipos dos DTOs de projeto, as funções de chamada da API (`projectApi.ts`), as chaves de cache (`projectKeys.ts`) e o `QueryClient` com o `QueryClientProvider`. Explicou o React Query com analogias e um exemplo fora do projeto e passou os requisitos da lista sem código. A meu pedido, configurou o plugin que organiza os imports no Prettier e o script `check` (build, lint e formatação num comando só); revisou os experimentos da lista e, a meu pedido, conferiu as requisições num Chrome sem tela, pelo protocolo de depuração, e escreveu a mensagem de erro da lista escolhida pelo `kind`. A lista e as instalações foram minhas                                                                                                                                                                                                                   |
 | 02–03/11/2026    | Bloco 3           | Explicou o debounce com uma analogia e um exemplo fora do projeto e passou os requisitos sem código. Revisou o hook e a página (o objeto novo na dependência do effect, que renderizava sem parar; o `false` no `onlyActive`, que trazia só os inativos; o `??` no lugar do `&&`) e explicou o eixo do flex e as margens automáticas. Sugeriu o select de status no lugar do checkbox e o `Intl.DateTimeFormat`, com o trecho de `formatDateTime`. A meu pedido, escreveu o componente `Card` do `shared` e as partes dele e as classes do Tailwind da lista, do card e da página, levando a grade para fora do `map` do `ProjectList`, e tirou uma anotação de tipo que sobrava no hook. Revisou os experimentos e as perguntas e criou o checklist do passo. O hook, a página, a lista, o `ProjectCard` e o select foram meus                                                                                                            |
+| 04/11/2026       | Bloco 3           | A meu pedido, escreveu a tela do detalhe (layout e mensagens de carregando e de erro), o `ProjectNotFound`, o `ProjectStatusBadge` e o `Modal`. Mostrou como ler o status pelo `error` do `useQuery` e como montar o `className` condicional, e explicou o `useMutation`, o `invalidateQueries`, closure entre renders e os dois `isPending`. Diagnosticou as duas requisições do detalhe e mediu os experimentos b e c e o clique duplo num Chrome sem tela, com projetos de teste. Revisou meu código (o `const` usado antes da declaração no `onSettled`, o `includes`, o "Cancelar" que não cancelava, o `className` entre aspas). Criou o checklist, registrou as convenções que aprovei e fez os commits. A validação do UUID, a busca, a mutação, a confirmação pelo nome, o tratamento do 404 e a decisão de voltar para a lista foram meus                                                                                        |
 
 ---
 
