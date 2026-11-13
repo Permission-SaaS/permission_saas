@@ -486,27 +486,22 @@ listada em [Evolução](#evolução).
 
 ## Uso de IA
 
-A disciplina incentiva o uso de IA, desde que citado. Usei o **Claude Code**, da Anthropic (modelos da
-família Claude Opus), no terminal e no VS Code, como um par de programação. Ele me ajudou a tirar
-dúvidas, a ver um exemplo antes de implementar algo que eu ainda não conhecia e a assumir as tarefas
-mecânicas, enquanto eu me concentrava na arquitetura e no domínio do projeto.
+Esta seção cobre a disciplina atual, **Desenvolvimento de aplicações interativas com React**, que
+seguiu a política de IA "sinal amarelo": a IA pode explicar conceitos, sugerir organização, gerar
+trechos pontuais de código, corrigir erros e apoiar formulários, chamadas à API e gerenciamento de
+estado, sempre citada. Usei o **Claude Code**, da Anthropic, no terminal e no VS Code, como um
+professor particular: eu queria reaprender React até conseguir construir sozinho.
 
 | Parte | Como foi feito |
 | ----- | -------------- |
-| Arquitetura e decisões | As decisões foram minhas, discutidas com a IA: qual funcionalidade extrair (o `audit`), RabbitMQ como broker, o envelope genérico da mensagem, os nomes das tags e os cortes de escopo. A IA ajudou a confrontar o plano com a rubrica e registrou as decisões no `PLAN.md` e nos ADRs |
-| Extração do `audit-service` | Delegada por ser mecânica: copiar o módulo, ajustar pacotes e imports. A IA executou e eu revisei |
-| OpenFeign | Feito em conjunto: escrevi partes da integração e deixei com a IA os detalhes repetitivos |
-| Dockerfiles e Compose | Eu já tinha um `Dockerfile` como base e deleguei a adaptação e o Compose, para me concentrar na arquitetura e no domínio. A IA explicou cada linha depois |
-| Profiles e Config Server | Eu nunca tinha usado o Config Server. Li a documentação, tirei as dúvidas com a IA e, como a implementação é simples depois de entendida, pedi que ela a fizesse |
-| RabbitMQ | A IA implementou o produtor e o consumidor. Acompanhei o fluxo no painel do RabbitMQ (conexões, fila e consumidor) até entender o papel de cada peça: produtor, broker, fila e consumidor |
-| Spring Batch | Eu sabia como fazer uma importação em massa, porque já tinha feito em PHP, mas não conhecia o Spring Batch. A IA implementou o job e me explicou cada componente: reader, processor, writer, chunk e job |
-| Reflexões arquiteturais | As respostas são minhas. A IA redigiu o texto a partir delas, e eu revisei |
-| Testes e documentação | Testei o fluxo completo pela coleção do Postman. A IA rodou a coleção inteira (newman) contra a solução em containers, incluindo as quedas de serviço, e redigiu o README, os ADRs, o `API.md` e o `RUNNING.md` |
+| Conceitos | Cada passo começou com a explicação do conceito, com analogias com o Java e um exemplo fora do projeto: o modelo de render, o React Router, o error boundary, a Context API, o `fetch`, o React Query, os formulários e o Redux |
+| Código do front | Os componentes, os hooks, o `httpClient`, o slice do Redux e a rota privada foram meus. Desde 28/10, para caber no prazo, a IA escreveu a parte estrutural (os tipos da API, as funções de chamada, as chaves do cache e a configuração do React Query e do Redux) e, a meu pedido, trechos pontuais, como componentes visuais e regras de validação |
+| Revisão | A IA revisou cada passo, apontando o bug e o porquê, e revisou as minhas previsões nos experimentos |
+| Testes e documentação | A IA conferiu os fluxos num Chrome sem tela, tirou os prints, manteve as convenções no `docs/ARCHITECTURE.md` do front e redigiu o rascunho do relatório, que revisei |
 
-Revisei cada mudança antes do commit e levei à IA toda dúvida que tive, até entendê-la. Algumas
-correções partiram dessa revisão, como tirar a validação do upload do controller (`RouteImportRequest`)
-e enxugar este README. Como os resultados da IA podem ter erros, cada mudança também passou por build,
-testes automatizados e pela coleção do Postman antes do commit.
+O registro completo, por data, está na seção "Uso de IA" do
+[`PLAN.md` da disciplina](docs/desenvolvimento_de_aplicacoes_interativas_com_react/PLAN.md). O das
+disciplinas anteriores continua nas respectivas pastas em `docs/` e nas tags de cada entrega.
 
 ---
 
