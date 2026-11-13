@@ -288,18 +288,27 @@ git commit -am "feat(project): ..." && git push
 Commitar em HEAD destacado deixa o commit fora de qualquer branch, e ele se perde fácil: confira o
 branch antes (`git branch --show-current`).
 
-**Registrar no guarda-chuva a versão que funciona junto:** depois do push no submódulo,
+**Registrar no guarda-chuva a versão que funciona junto** (o ponteiro de cada submódulo). Ele só
+avança nos marcos, e não a cada commit do submódulo (decidido em 12/11/2026):
+
+- **Quando:** no fim de um passo ou funcionalidade, antes de uma tag de entrega, ou quando o Compose ou
+  a documentação do guarda-chuva dependem da mudança. No dia a dia, o ponteiro atrasado não quebra
+  nada.
+- **No mesmo commit:** se o passo também mudou algo no guarda-chuva (o plano da disciplina, um ADR),
+  o ponteiro entra junto, nesse commit, sem um `chore: bump` separado.
+- **Bump sozinho, com resumo:** quando só o ponteiro muda, o corpo do commit lista os commits que ele
+  traz.
 
 ```bash
 cd ..                                     # raiz do guarda-chuva
 git add permission_saas_api
-git commit -m "chore: bump permission_saas_api"
+git commit -m "chore: bump permission_saas_api" -m "$(git submodule summary --cached)"
 git push
 ```
 
-Não é preciso fazer isso a cada commit do submódulo, só quando o conjunto deve ficar registrado — por
-exemplo, antes de uma tag de entrega. Uma tag no guarda-chuva fixa o commit de cada submódulo: é a
-fotografia do sistema inteiro.
+O `push.recurseSubmodules=check` recusa o push do guarda-chuva se o commit do submódulo ainda não
+foi enviado: faça o push no submódulo antes. Uma tag no guarda-chuva fixa o commit de cada
+submódulo: é a fotografia do sistema inteiro.
 
 **Trazer o `main` mais recente de todos:** `git submodule update --remote --merge`.
 
