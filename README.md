@@ -5,18 +5,21 @@ plano (pagamento simulado) e recebe uma **ApiKey**. Sistemas externos usam essa
 ApiKey para validar, em um único endpoint, se uma requisição pode acessar uma rota
 com determinado cargo.
 
-Um **monolito modular** com um serviço extraído dele, em Java 21 / Spring Boot 4.1.0,
-construído como projeto de longo prazo ao longo da Pós-Graduação: cada disciplina evolui
-este mesmo código em vez de começar um projeto do zero. O que cada uma acrescentou está em
-[Evolução](#evolução).
+Um **monolito modular** com um serviço extraído dele, em Java 21 / Spring Boot 4.1.0, e um
+**front-end em React** que o consome, construídos como projeto de longo prazo ao longo da
+Pós-Graduação: cada disciplina evolui este mesmo código em vez de começar um projeto do zero. O que
+cada uma acrescentou está em [Evolução](#evolução).
 
 > **Repositórios.** Desde 05/10/2026, cada aplicação tem repositório próprio na organização
 > [Permission-SaaS](https://github.com/Permission-SaaS), e este é o repositório guarda-chuva: fixa a
 > versão de cada uma como submódulo, sobe o sistema inteiro e guarda a documentação do sistema e as
 > tags (ADR-015). **As versões avaliadas continuam nas tags**, no layout de pasta única da época:
-> [`etapa-4`](https://github.com/Permission-SaaS/permission_saas/tree/etapa-4) (Spring Boot) e [`arq-etapa-4`](https://github.com/Permission-SaaS/permission_saas/tree/arq-etapa-4) (Microsserviços).
+> [`etapa-4`](https://github.com/Permission-SaaS/permission_saas/tree/etapa-4) (Spring Boot) e [`arq-etapa-4`](https://github.com/Permission-SaaS/permission_saas/tree/arq-etapa-4) (Microsserviços). A entrega de React, já com
+> os repositórios separados, está em [`react-entrega`](https://github.com/Permission-SaaS/permission_saas/tree/react-entrega).
 
 **Stack:** Java 21 · Spring Boot 4.1.0 · Spring Data JPA · PostgreSQL 16 · Flyway · Spring Modulith · Spring Cloud OpenFeign · Spring Cloud Config · RabbitMQ · Spring Batch · Docker Compose · Maven
+
+**Front-end:** React 19 · TypeScript · Vite · Tailwind CSS · React Router · TanStack Query · Redux Toolkit
 
 ---
 
@@ -50,12 +53,15 @@ O caminho feliz completo (cliente → plano → ApiKey → projeto → validaç�
 `API.md` [da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/API.md) e [do `audit-service`](https://github.com/Permission-SaaS/permission_saas_audit/blob/main/docs/API.md). Profiles, variáveis de ambiente, rodar fora do Docker, debug,
 testes e o que fazer com a porta 5432 ocupada: [`docs/RUNNING.md`](docs/RUNNING.md).
 
+O front-end ainda fica fora do Compose e roda com o Node, com a API no ar: os passos estão no
+[`README.md` do `permission_saas_front`](https://github.com/Permission-SaaS/permission_saas_front#readme).
+
 ```
 permission_saas/                guarda-chuva (este repositório)
 ├── permission_saas_api/        submódulo: aplicação principal (monolito modular)
 ├── permission_saas_audit/      submódulo: trilha de auditoria extraída como serviço
 ├── permission_saas_config/     submódulo: configuração centralizada (Spring Cloud Config)
-├── permission_saas_front/      submódulo: front-end, ainda sem funcionalidades
+├── permission_saas_front/      submódulo: front-end em React (CRUD de projetos e login simulado)
 ├── config-repo/                os arquivos de configuração que o config-server serve
 ├── docker-compose.yml          orquestra as aplicações e os bancos
 ├── docker/                     script de inicialização do Postgres da aplicação principal
@@ -427,7 +433,7 @@ evita comparar a chave por bcrypt com todas as chaves ativas
 ([`DOMAIN.md` da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/DOMAIN.md) → "Limitações conhecidas").
 
 **Trabalho futuro:** gateway de pagamento real, autenticação/JWT com Spring Security,
-exportação CSV/JSON, front-end, `userId` no evento de auditoria, uma aplicação
+exportação CSV/JSON, `userId` no evento de auditoria, uma aplicação
 cliente de demonstração consumindo o `POST /validate-permission` e a renomeação desse
 endpoint para `POST /permissions/validate`, que alinharia o recurso ao restante da API
 (ver a nota de contrato no [`API.md` da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/API.md)).
@@ -445,6 +451,7 @@ distinguir o que já existia do que foi construído em cada momento.
 | [Clean Code e Padrões de Projeto](docs/clean_code_e_padroes_de_projeto/PLAN.md)                                        | até 05/07/2026 | Módulos`shared`, `identity`, `billing` e `permission`; Factory Method, Adapter e Chain of Responsibility; fronteiras de módulo com Spring Modulith | —                                               |
 | [Desenvolvimento de aplicações Java com Spring Boot](docs/desenvolvimento_de_aplicacoes_java_com_spring_boot/PLAN.md) | até 31/08/2026 | Módulos `project` e `audit`, CRUD REST completo, relacionamentos e herança JPA, leitura de arquivos texto | tags `etapa-1` … `etapa-4` |
 | [Arquiteturas avançadas de software com microsserviços e Spring Framework](docs/arquiteturas_avancadas_de_software_com_microsservicos_e_spring_framework/PLAN.md) | até 05/10/2026 | `audit` extraído como serviço independente, OpenFeign, Config Server, banco por serviço, RabbitMQ e Spring Batch | tags `arq-etapa-1` … `arq-etapa-4` |
+| [Desenvolvimento de aplicações interativas com React](docs/desenvolvimento_de_aplicacoes_interativas_com_react/PLAN.md) | até 14/11/2026 | O `permission_saas_front`: CRUD de projetos com React Query, login simulado com a sessão no Redux, rota privada, Context API, hooks próprios e um error boundary em classe | tag `react-entrega` e o [relatório](docs/desenvolvimento_de_aplicacoes_interativas_com_react/ENTREGA.md) |
 
 As tags desta disciplina usam o prefixo `arq-` porque `etapa-1` … `etapa-4` já
 apontam para a evidência da disciplina anterior e não podem ser movidas.
@@ -454,7 +461,7 @@ Todas as tags acima ficam neste repositório e continuam apontando para o códig
 entregue.
 
 O relatório escrito da primeira disciplina foi entregue como PDF no Moodle e não está
-versionado aqui.
+versionado aqui. O da disciplina de React está na pasta dela, em Markdown e no PDF entregue.
 
 ---
 
@@ -477,7 +484,7 @@ Cada aplicação documenta o próprio interior no seu repositório:
 | [`permission_saas_api`](https://github.com/Permission-SaaS/permission_saas_api)       | `ARCHITECTURE.md` (módulos e camadas), `DOMAIN.md`, `API.md`, `PATTERNS.md` e `TEST-ARCHITECTURE.md`, em `docs/` |
 | [`permission_saas_audit`](https://github.com/Permission-SaaS/permission_saas_audit)     | `ARCHITECTURE.md`, `DOMAIN.md` e `API.md` (endpoints e contrato da fila), em `docs/`                              |
 | [`permission_saas_config`](https://github.com/Permission-SaaS/permission_saas_config)    | `README.md`                                                                                                       |
-| [`permission_saas_front`](https://github.com/Permission-SaaS/permission_saas_front)      | `README.md` (front-end em React, TypeScript, Vite e Tailwind CSS, ainda sem funcionalidades)                       |
+| [`permission_saas_front`](https://github.com/Permission-SaaS/permission_saas_front)      | `README.md` (como rodar, com o login de demonstração) e `docs/ARCHITECTURE.md` (pastas e convenções de código)     |
 
 O que é específico de uma disciplina — enunciado e planejamento — fica na pasta dela,
 listada em [Evolução](#evolução).
@@ -486,7 +493,7 @@ listada em [Evolução](#evolução).
 
 ## Uso de IA
 
-Esta seção cobre a disciplina atual, **Desenvolvimento de aplicações interativas com React**, que
+Esta seção cobre a última disciplina entregue, **Desenvolvimento de aplicações interativas com React**, que
 seguiu a política de IA "sinal amarelo": a IA pode explicar conceitos, sugerir organização, gerar
 trechos pontuais de código, corrigir erros e apoiar formulários, chamadas à API e gerenciamento de
 estado, sempre citada. Usei o **Claude Code**, da Anthropic, no terminal e no VS Code, como um
