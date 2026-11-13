@@ -3,6 +3,7 @@
 **Aluno:** Jairo Williams Guedes Lopes Neto
 **Disciplina:** Desenvolvimento de aplicações interativas com React
 **Prazo:** 14/11/2026 23:59 (relatório técnico em PDF no Moodle; era 09/11, e a nova data apareceu em 05/11)
+**Situação:** ✅ entregue em 12/11/2026 (relatório postado no Moodle)
 **Disponibilidade:** ~2h/dia
 **Base:** Permission SaaS como ficou depois da disciplina de microsserviços (tag `arq-etapa-4`) e da
 separação em repositórios (ADR-015). O front-end vai no `permission_saas_front`, que até aqui só tinha
@@ -178,7 +179,7 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
 
 ---
 
-## Situação (atualizado em 12/11/2026)
+## Situação (entregue em 12/11/2026)
 
 - [x] Enunciado separado em `README.md` e `ETAPA1..3.md`
 - [x] Stack decidida e registrada (ADR-016)
@@ -264,7 +265,9 @@ Ficam no plano porque estão nas features: `useEffect` (debounce da busca), hook
       perguntas e experimentos de previsão (página pedida, F5 com o `localStorage` apagado e duas abas).
       **Trabalho futuro:** o login de verdade, com o JWT, e sincronizar o logout entre abas pelo evento
       `storage`
-- [ ] **Bloco 6:** fechamento ← próximo passo
+- [x] **Bloco 6** (12/11): os ícones do Phosphor como componente de terceiros, os prints, o roteiro de 12
+      passos no Chrome, no Firefox e no Edge, comentários curtos nos pontos não óbvios do código e o
+      relatório (`ENTREGA.md` e o PDF), postado no Moodle em 12/11
 
 ---
 
