@@ -58,7 +58,7 @@ O que esta disciplina acrescenta ao sistema:
 | A rubrica cobra | O enunciado (etapas) | Como fica |
 |---|---|---|
 | Exportação de dados protegida por JWT (itens 9–12) | nenhuma etapa fala em exportação | export e import do projeto completo em JSON (bloco 5) |
-| Mockup "detalhado" (item 4) | a Etapa 0 pede um mockup | 30 telas (celular em 360 px e desktop), com estados e navegação clicável, feitas pela IA com a liberação do professor (bloco 0) |
+| Mockup "detalhado" (item 4) | a Etapa 0 pede um mockup | 36 telas (26 no celular, em 360 px, e 10 no desktop), com estados e navegação clicável, feitas pela IA com a liberação do professor (bloco 0) |
 | "Integração contínua" (item 1) | — | GitHub Actions em cada repositório (bloco 1) |
 | "Serviço RESTful fornecido" (item 2) | a Etapa 6 permite uma API própria | a própria API; o relatório explica a escolha |
 | Testes "abrangentes" do update e do delete (item 7) e da segurança (itens 11 e 16) | a Etapa 3 pede testar e validar | unidade, MockMvc e Testcontainers (blocos 2, 3 e 5) |
@@ -139,6 +139,7 @@ bloco 4 para login e cadastro).
 | **O erro do nome só aparece quando o texto digitado deixa de bater com o começo do nome.** "Loja vir" não acusa nada, e "Loja V" acusa. Hoje o erro aparece a cada letra que ainda não completa o nome | 17/11 | `ProjectDetail`: hoje `hasError = confirmProjectName !== "" && !isProjectNameConfirmed`; passa a ser `confirmProjectName !== "" && !project.name.startsWith(confirmProjectName)`. O botão continua dependendo do nome exato (`isProjectNameConfirmed`) |
 | **O cabeçalho atual quebra em 360 px:** o nome do usuário e o "Sair" saem da tela, e a busca não ocupa a largura (print `entrega/prints/04-front-projetos-celular.png`). Resolve com a barra inferior e o cabeçalho fino do mockup | 17/11 | `AppLayout` e a lista de projetos |
 | **Textos na voz da marca:** "Ops!!" sai, "Deletando..." vira "Excluindo...", "Novo Projeto" vira "Novo projeto"... A tabela completa está no branding, em "Voz e tom" | 17/11 | as telas que forem refeitas |
+| **Criar e editar projeto num sheet, e não numa página.** No celular, o sheet sobe de baixo; a partir do `md`, entra pela direita, com 480 px. A lista ou o detalhe continua visível atrás, escurecido. O sheet fecha pelo X, pelo Cancelar, pela tecla Esc ou com um toque fora; no celular, também arrastando para baixo pela alça do topo (pedido em 18/11). As rotas continuam, como rotas filhas: `/projects/new` abre o sheet sobre a lista, e `/projects/:id/edit` abre o sheet sobre o detalhe. Assim, o voltar do navegador fecha o sheet, e o link continua abrindo direto nele. Ao criar, o sheet fecha e abre o detalhe do projeto novo, com o aviso de sucesso; ao salvar, fecha e fica no detalhe. O "Novo" da barra de baixo e do cabeçalho do desktop deixa de levar a uma página e passa a abrir o sheet. A exclusão continua num diálogo, porque confirma uma decisão em vez de preencher um formulário | 18/11 | `router.tsx` (as duas rotas viram filhas), `ProjectListPage` e `ProjectDetailPage` (ganham o `<Outlet />`); o `ProjectFormPage` sai e dá lugar a um componente que escolhe pela largura: o `Drawer` do shadcn/ui (feito sobre o Vaul, que dá o arrastar) abaixo do `md` e o `Sheet` com `side="right"` a partir dele, com o mesmo formulário dentro (bloco 2; ADR-017) |
 
 ---
 
@@ -211,6 +212,8 @@ O JWT, o logout seguro, o export protegido e os testes de segurança **não são
   - [x] as 35 telas em PNG em `entrega/mockup/` (celular em 2x, desktop em 1x)
   - [x] ambiente conferido, com 4 prints em `entrega/prints/`: a API respondendo (`/actuator/health`), a lista de projetos no front, a mesma chamada pelo proxy do Vite (`/api/projects`) e o front atual em 360 px. Os prints usaram um PostgreSQL temporário com dados de demonstração, apagado depois; o banco local do Jairo não foi tocado
   - [x] canvas aberto para quem tiver o link (17/11); é o link do PDF e o que vai para o professor: <https://claude.ai/artifact/5CUHCznKRK51vLerPZfoVq#page-01487ea111e7>
+- [x] Criar e editar projeto em sheet no mockup (18/11): o sheet de editar no desktop é tela nova (agora 26 no
+      celular e 10 no desktop), e os PNGs dessas telas foram refeitos (36 em `entrega/mockup/`)
 - [ ] **Bloco 1:** diagnóstico; Dockerfile do front; portas de desenvolvimento separadas; CI; auditoria
       de código (IA) e escolha dos achados
 - [ ] **Bloco 2:** shadcn/ui e Sonner; Axios; React Hook Form + Zod; cargos e rotas no detalhe; validações; testes do CRUD
@@ -241,6 +244,7 @@ Ferramenta: **Claude Code**, da Anthropic.
 | 17/11/2026 | Bloco 0 (mockup) | Com a liberação do professor para usar IA no mockup, e a meu pedido, desenhou o mockup num canvas de design do Claude: 30 telas, 24 no celular (360 px) e 6 no desktop (1440 px), com os estados de carregando, vazio, erro e sucesso, e links entre as telas para navegar. Partiu das decisões de tela que tomei no jogo de perguntas e do branding. Propôs como a matriz de concessões fica no celular (um cargo por vez). A revisão das telas é minha |
 | 17/11/2026 | Bloco 0 (fechamento) | A meu pedido, gerou as 35 telas do mockup em PNG num Chrome sem janela e tirou os 4 prints do ambiente com um script que sobe o front, faz o login de demonstração e captura as telas. Para os prints, rodou a API contra um PostgreSQL temporário com dados de demonstração e apagou tudo depois. Apontou que o cabeçalho do front atual quebra em 360 px; o ajuste ficou para o bloco 2 |
 | 17/11/2026 | ADR-017 | A meu pedido, avaliou se valia deixar as bibliotecas do front prontas antes dos blocos e recomendou registrar a decisão agora e instalar cada uma no bloco em que é usada (o Zustand só no bloco 4, para não migrar duas vezes a sessão simulada); escreveu o ADR-017. A escolha das bibliotecas (Sonner, React Hook Form, Zod e o Zustand no lugar do Redux) foi minha |
+| 18/11/2026 | Mockup (sheets) | A meu pedido, trocou as telas de criar e editar projeto por sheets (de baixo no celular e pela direita no desktop), desenhou o sheet de editar no desktop, que não existia, e refez os PNGs dessas telas; depois, a meu pedido, pôs no celular a alça para fechar o sheet arrastando para baixo. Corrigiu dois links do desktop que levavam à tela errada (o Editar do detalhe abria o formulário de criar, e os cards da lista abriam o detalhe do celular) e registrou o ajuste no código. A ideia de usar sheets foi minha |
 
 ---
 

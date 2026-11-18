@@ -807,6 +807,7 @@ relatório listou a troca dessas peças como trabalho futuro. A disciplina Full 
 |---|---|---|
 | componentes escritos à mão com Tailwind | **shadcn/ui**, com as cores e fontes do `docs/branding/tokens.css` e o raio de 2 px | bloco 2 |
 | `NotificationContext` + `Toast` próprios | **Sonner**, pelo componente do shadcn/ui | bloco 2 |
+| formulários de criar e editar em páginas próprias (`ProjectFormPage`) | **Sheet** do shadcn/ui no desktop e **Drawer** (feito sobre o **Vaul**) no celular, que fecha arrastando para baixo; decidido em 18/11, depois do mockup | bloco 2 |
 | `httpClient` sobre o `fetch` | **Axios**, com interceptors (o de renovar o token entra no bloco 4) | bloco 2 |
 | `useForm` próprio e validação à mão (`validateProject`, `validateLogin`) | **React Hook Form + Zod**: o schema do Zod valida o formulário e também gera o tipo do TypeScript | bloco 2 (login e cadastro no bloco 4) |
 | Redux Toolkit (`authSlice`, `store.ts`) | **Zustand** | bloco 4, junto com a sessão do JWT |
