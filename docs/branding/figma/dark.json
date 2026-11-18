@@ -1,0 +1,162 @@
+{
+  "background": {
+    "value": "{neutral.950}",
+    "type": "color"
+  },
+  "foreground": {
+    "value": "{neutral.50}",
+    "type": "color"
+  },
+  "card": {
+    "value": "{neutral.900}",
+    "type": "color"
+  },
+  "card-foreground": {
+    "value": "{neutral.50}",
+    "type": "color"
+  },
+  "popover": {
+    "value": "{neutral.800}",
+    "type": "color"
+  },
+  "popover-foreground": {
+    "value": "{neutral.50}",
+    "type": "color"
+  },
+  "primary": {
+    "value": "{gold.500}",
+    "type": "color"
+  },
+  "primary-foreground": {
+    "value": "{neutral.950}",
+    "type": "color"
+  },
+  "secondary": {
+    "value": "{gold.950}",
+    "type": "color"
+  },
+  "secondary-foreground": {
+    "value": "{gold.100}",
+    "type": "color"
+  },
+  "muted": {
+    "value": "{neutral.800}",
+    "type": "color"
+  },
+  "muted-foreground": {
+    "value": "{neutral.400}",
+    "type": "color"
+  },
+  "accent": {
+    "value": "{neutral.800}",
+    "type": "color"
+  },
+  "accent-foreground": {
+    "value": "{neutral.50}",
+    "type": "color"
+  },
+  "destructive": {
+    "value": "{red.400}",
+    "type": "color"
+  },
+  "destructive-foreground": {
+    "value": "{neutral.950}",
+    "type": "color"
+  },
+  "destructive-subtle": {
+    "value": "{red.950}",
+    "type": "color"
+  },
+  "success": {
+    "value": "{green.400}",
+    "type": "color"
+  },
+  "success-foreground": {
+    "value": "{neutral.950}",
+    "type": "color"
+  },
+  "success-subtle": {
+    "value": "{green.950}",
+    "type": "color"
+  },
+  "warning": {
+    "value": "{orange.400}",
+    "type": "color"
+  },
+  "warning-foreground": {
+    "value": "{neutral.950}",
+    "type": "color"
+  },
+  "warning-subtle": {
+    "value": "{orange.950}",
+    "type": "color"
+  },
+  "info": {
+    "value": "{blue.400}",
+    "type": "color"
+  },
+  "info-foreground": {
+    "value": "{neutral.950}",
+    "type": "color"
+  },
+  "info-subtle": {
+    "value": "{blue.950}",
+    "type": "color"
+  },
+  "border": {
+    "value": "{neutral.800}",
+    "type": "color"
+  },
+  "input": {
+    "value": "{neutral.600}",
+    "type": "color"
+  },
+  "ring": {
+    "value": "{gold.500}",
+    "type": "color"
+  },
+  "link": {
+    "value": "{gold.500}",
+    "type": "color"
+  },
+  "method-get": {
+    "value": "{blue.400}",
+    "type": "color"
+  },
+  "method-get-subtle": {
+    "value": "{blue.950}",
+    "type": "color"
+  },
+  "method-post": {
+    "value": "{green.400}",
+    "type": "color"
+  },
+  "method-post-subtle": {
+    "value": "{green.950}",
+    "type": "color"
+  },
+  "method-put": {
+    "value": "{orange.400}",
+    "type": "color"
+  },
+  "method-put-subtle": {
+    "value": "{orange.950}",
+    "type": "color"
+  },
+  "method-patch": {
+    "value": "{purple.400}",
+    "type": "color"
+  },
+  "method-patch-subtle": {
+    "value": "{purple.950}",
+    "type": "color"
+  },
+  "method-delete": {
+    "value": "{red.400}",
+    "type": "color"
+  },
+  "method-delete-subtle": {
+    "value": "{red.950}",
+    "type": "color"
+  }
+}

@@ -1,0 +1,341 @@
+{
+  "espaco": {
+    "0": {
+      "value": "0",
+      "type": "spacing"
+    },
+    "4": {
+      "value": "4",
+      "type": "spacing"
+    },
+    "8": {
+      "value": "8",
+      "type": "spacing"
+    },
+    "12": {
+      "value": "12",
+      "type": "spacing"
+    },
+    "16": {
+      "value": "16",
+      "type": "spacing"
+    },
+    "20": {
+      "value": "20",
+      "type": "spacing"
+    },
+    "24": {
+      "value": "24",
+      "type": "spacing"
+    },
+    "32": {
+      "value": "32",
+      "type": "spacing"
+    },
+    "40": {
+      "value": "40",
+      "type": "spacing"
+    },
+    "48": {
+      "value": "48",
+      "type": "spacing"
+    },
+    "64": {
+      "value": "64",
+      "type": "spacing"
+    },
+    "80": {
+      "value": "80",
+      "type": "spacing"
+    },
+    "96": {
+      "value": "96",
+      "type": "spacing"
+    }
+  },
+  "raio": {
+    "padrao": {
+      "value": "2",
+      "type": "borderRadius",
+      "description": "o raio do projeto, em tudo: botões, campos, selos, abas, cards, modais e painéis (rounded-xs)"
+    },
+    "total": {
+      "value": "9999",
+      "type": "borderRadius",
+      "description": "só avatar e pílula (rounded-full)"
+    }
+  },
+  "texto": {
+    "display": {
+      "celular": {
+        "value": {
+          "fontFamily": "Nunito",
+          "fontWeight": "800",
+          "fontSize": "28",
+          "lineHeight": "36",
+          "letterSpacing": "0",
+          "paragraphSpacing": "0",
+          "paragraphIndent": "0",
+          "textCase": "none",
+          "textDecoration": "none"
+        },
+        "type": "typography",
+        "description": "título de destaque (login, lista vazia)"
+      },
+      "desktop": {
+        "value": {
+          "fontFamily": "Nunito",
+          "fontWeight": "800",
+          "fontSize": "40",
+          "lineHeight": "48",
+          "letterSpacing": "0",
+          "paragraphSpacing": "0",
+          "paragraphIndent": "0",
+          "textCase": "none",
+          "textDecoration": "none"
+        },
+        "type": "typography",
+        "description": "título de destaque, a partir do md"
+      }
+    },
+    "titulo-1": {
+      "celular": {
+        "value": {
+          "fontFamily": "Nunito",
+          "fontWeight": "700",
+          "fontSize": "24",
+          "lineHeight": "32",
+          "letterSpacing": "0",
+          "paragraphSpacing": "0",
+          "paragraphIndent": "0",
+          "textCase": "none",
+          "textDecoration": "none"
+        },
+        "type": "typography",
+        "description": "título da tela"
+      },
+      "desktop": {
+        "value": {
+          "fontFamily": "Nunito",
+          "fontWeight": "700",
+          "fontSize": "32",
+          "lineHeight": "40",
+          "letterSpacing": "0",
+          "paragraphSpacing": "0",
+          "paragraphIndent": "0",
+          "textCase": "none",
+          "textDecoration": "none"
+        },
+        "type": "typography",
+        "description": "título da tela, a partir do md"
+      }
+    },
+    "titulo-2": {
+      "celular": {
+        "value": {
+          "fontFamily": "Nunito",
+          "fontWeight": "700",
+          "fontSize": "20",
+          "lineHeight": "28",
+          "letterSpacing": "0",
+          "paragraphSpacing": "0",
+          "paragraphIndent": "0",
+          "textCase": "none",
+          "textDecoration": "none"
+        },
+        "type": "typography",
+        "description": "seção da tela"
+      },
+      "desktop": {
+        "value": {
+          "fontFamily": "Nunito",
+          "fontWeight": "700",
+          "fontSize": "24",
+          "lineHeight": "32",
+          "letterSpacing": "0",
+          "paragraphSpacing": "0",
+          "paragraphIndent": "0",
+          "textCase": "none",
+          "textDecoration": "none"
+        },
+        "type": "typography",
+        "description": "seção da tela, a partir do md"
+      }
+    },
+    "titulo-3": {
+      "celular": {
+        "value": {
+          "fontFamily": "Nunito",
+          "fontWeight": "600",
+          "fontSize": "18",
+          "lineHeight": "28",
+          "letterSpacing": "0",
+          "paragraphSpacing": "0",
+          "paragraphIndent": "0",
+          "textCase": "none",
+          "textDecoration": "none"
+        },
+        "type": "typography",
+        "description": "título de card e de modal"
+      },
+      "desktop": {
+        "value": {
+          "fontFamily": "Nunito",
+          "fontWeight": "600",
+          "fontSize": "20",
+          "lineHeight": "28",
+          "letterSpacing": "0",
+          "paragraphSpacing": "0",
+          "paragraphIndent": "0",
+          "textCase": "none",
+          "textDecoration": "none"
+        },
+        "type": "typography",
+        "description": "título de card e de modal, a partir do md"
+      }
+    },
+    "corpo": {
+      "value": {
+        "fontFamily": "Nunito",
+        "fontWeight": "400",
+        "fontSize": "16",
+        "lineHeight": "24",
+        "letterSpacing": "0",
+        "paragraphSpacing": "0",
+        "paragraphIndent": "0",
+        "textCase": "none",
+        "textDecoration": "none"
+      },
+      "type": "typography",
+      "description": "texto corrido e campos de formulário"
+    },
+    "corpo-pequeno": {
+      "value": {
+        "fontFamily": "Nunito",
+        "fontWeight": "400",
+        "fontSize": "14",
+        "lineHeight": "20",
+        "letterSpacing": "0",
+        "paragraphSpacing": "0",
+        "paragraphIndent": "0",
+        "textCase": "none",
+        "textDecoration": "none"
+      },
+      "type": "typography",
+      "description": "texto de apoio, células de tabela"
+    },
+    "rotulo": {
+      "value": {
+        "fontFamily": "Nunito",
+        "fontWeight": "600",
+        "fontSize": "14",
+        "lineHeight": "20",
+        "letterSpacing": "0",
+        "paragraphSpacing": "0",
+        "paragraphIndent": "0",
+        "textCase": "none",
+        "textDecoration": "none"
+      },
+      "type": "typography",
+      "description": "rótulo de campo, botão, aba"
+    },
+    "legenda": {
+      "value": {
+        "fontFamily": "Nunito",
+        "fontWeight": "400",
+        "fontSize": "12",
+        "lineHeight": "16",
+        "letterSpacing": "0",
+        "paragraphSpacing": "0",
+        "paragraphIndent": "0",
+        "textCase": "none",
+        "textDecoration": "none"
+      },
+      "type": "typography",
+      "description": "datas, contadores, ajuda do campo"
+    },
+    "codigo": {
+      "value": {
+        "fontFamily": "JetBrains Mono",
+        "fontWeight": "400",
+        "fontSize": "14",
+        "lineHeight": "20",
+        "letterSpacing": "0",
+        "paragraphSpacing": "0",
+        "paragraphIndent": "0",
+        "textCase": "none",
+        "textDecoration": "none"
+      },
+      "type": "typography",
+      "description": "rota, ApiKey, JSON, selo de método"
+    }
+  },
+  "sombra": {
+    "1-card": {
+      "value": [
+        {
+          "x": "0",
+          "y": "1",
+          "blur": "2",
+          "spread": "0",
+          "color": "#0d0d0e0f",
+          "type": "dropShadow"
+        },
+        {
+          "x": "0",
+          "y": "1",
+          "blur": "3",
+          "spread": "0",
+          "color": "#0d0d0e1a",
+          "type": "dropShadow"
+        }
+      ],
+      "type": "boxShadow",
+      "description": "cards"
+    },
+    "2-menu": {
+      "value": [
+        {
+          "x": "0",
+          "y": "4",
+          "blur": "8",
+          "spread": "-2",
+          "color": "#0d0d0e1a",
+          "type": "dropShadow"
+        },
+        {
+          "x": "0",
+          "y": "2",
+          "blur": "4",
+          "spread": "-2",
+          "color": "#0d0d0e0f",
+          "type": "dropShadow"
+        }
+      ],
+      "type": "boxShadow",
+      "description": "menus e popovers"
+    },
+    "3-modal": {
+      "value": [
+        {
+          "x": "0",
+          "y": "12",
+          "blur": "24",
+          "spread": "-4",
+          "color": "#0d0d0e1f",
+          "type": "dropShadow"
+        },
+        {
+          "x": "0",
+          "y": "4",
+          "blur": "8",
+          "spread": "-4",
+          "color": "#0d0d0e14",
+          "type": "dropShadow"
+        }
+      ],
+      "type": "boxShadow",
+      "description": "modais"
+    }
+  }
+}

@@ -1,0 +1,162 @@
+{
+  "background": {
+    "value": "{neutral.50}",
+    "type": "color"
+  },
+  "foreground": {
+    "value": "{neutral.950}",
+    "type": "color"
+  },
+  "card": {
+    "value": "{white}",
+    "type": "color"
+  },
+  "card-foreground": {
+    "value": "{neutral.950}",
+    "type": "color"
+  },
+  "popover": {
+    "value": "{white}",
+    "type": "color"
+  },
+  "popover-foreground": {
+    "value": "{neutral.950}",
+    "type": "color"
+  },
+  "primary": {
+    "value": "{gold.500}",
+    "type": "color"
+  },
+  "primary-foreground": {
+    "value": "{neutral.950}",
+    "type": "color"
+  },
+  "secondary": {
+    "value": "{gold.100}",
+    "type": "color"
+  },
+  "secondary-foreground": {
+    "value": "{neutral.950}",
+    "type": "color"
+  },
+  "muted": {
+    "value": "{neutral.100}",
+    "type": "color"
+  },
+  "muted-foreground": {
+    "value": "{neutral.700}",
+    "type": "color"
+  },
+  "accent": {
+    "value": "{gold.50}",
+    "type": "color"
+  },
+  "accent-foreground": {
+    "value": "{neutral.950}",
+    "type": "color"
+  },
+  "destructive": {
+    "value": "{red.700}",
+    "type": "color"
+  },
+  "destructive-foreground": {
+    "value": "{white}",
+    "type": "color"
+  },
+  "destructive-subtle": {
+    "value": "{red.50}",
+    "type": "color"
+  },
+  "success": {
+    "value": "{green.700}",
+    "type": "color"
+  },
+  "success-foreground": {
+    "value": "{white}",
+    "type": "color"
+  },
+  "success-subtle": {
+    "value": "{green.50}",
+    "type": "color"
+  },
+  "warning": {
+    "value": "{orange.700}",
+    "type": "color"
+  },
+  "warning-foreground": {
+    "value": "{white}",
+    "type": "color"
+  },
+  "warning-subtle": {
+    "value": "{orange.50}",
+    "type": "color"
+  },
+  "info": {
+    "value": "{blue.700}",
+    "type": "color"
+  },
+  "info-foreground": {
+    "value": "{white}",
+    "type": "color"
+  },
+  "info-subtle": {
+    "value": "{blue.50}",
+    "type": "color"
+  },
+  "border": {
+    "value": "{neutral.200}",
+    "type": "color"
+  },
+  "input": {
+    "value": "{neutral.500}",
+    "type": "color"
+  },
+  "ring": {
+    "value": "{gold.800}",
+    "type": "color"
+  },
+  "link": {
+    "value": "{gold.800}",
+    "type": "color"
+  },
+  "method-get": {
+    "value": "{blue.700}",
+    "type": "color"
+  },
+  "method-get-subtle": {
+    "value": "{blue.50}",
+    "type": "color"
+  },
+  "method-post": {
+    "value": "{green.700}",
+    "type": "color"
+  },
+  "method-post-subtle": {
+    "value": "{green.50}",
+    "type": "color"
+  },
+  "method-put": {
+    "value": "{orange.700}",
+    "type": "color"
+  },
+  "method-put-subtle": {
+    "value": "{orange.50}",
+    "type": "color"
+  },
+  "method-patch": {
+    "value": "{purple.700}",
+    "type": "color"
+  },
+  "method-patch-subtle": {
+    "value": "{purple.50}",
+    "type": "color"
+  },
+  "method-delete": {
+    "value": "{red.700}",
+    "type": "color"
+  },
+  "method-delete-subtle": {
+    "value": "{red.50}",
+    "type": "color"
+  }
+}

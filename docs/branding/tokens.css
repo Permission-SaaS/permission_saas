@@ -1,0 +1,188 @@
+/*
+ * Branding — tokens de design (tema claro e tema escuro).
+ *
+ * Fonte da verdade: tokens.json, nesta mesma pasta. As cores daqui repetem as de lá, e o
+ * contrast.py confere que as duas listas batem e que os pares de texto passam no WCAG AA.
+ *
+ * Formato do shadcn/ui com Tailwind CSS v4: no front, este conteúdo substitui o bloco de
+ * variáveis que o `shadcn init` gera no index.css. Cada cor vira classe do Tailwind
+ * (bg-primary, text-muted-foreground, border-input, ring-ring, text-method-get...).
+ * O tema escuro vale para tudo dentro de um elemento com a classe `dark`.
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #f8f8f8; /* neutral.50 */
+  --foreground: #0d0d0e; /* neutral.950 */
+  --card: #ffffff; /* white */
+  --card-foreground: #0d0d0e; /* neutral.950 */
+  --popover: #ffffff; /* white */
+  --popover-foreground: #0d0d0e; /* neutral.950 */
+  --primary: #e3b400; /* gold.500 */
+  --primary-foreground: #0d0d0e; /* neutral.950 */
+  --secondary: #f6e6a6; /* gold.100 */
+  --secondary-foreground: #0d0d0e; /* neutral.950 */
+  --muted: #efeff0; /* neutral.100 */
+  --muted-foreground: #5c5c63; /* neutral.700 */
+  --accent: #fef9e7; /* gold.50 */
+  --accent-foreground: #0d0d0e; /* neutral.950 */
+  --destructive: #b42318; /* red.700 */
+  --destructive-foreground: #ffffff; /* white */
+  --destructive-subtle: #fef3f2; /* red.50 */
+  --success: #067647; /* green.700 */
+  --success-foreground: #ffffff; /* white */
+  --success-subtle: #ecfdf3; /* green.50 */
+  --warning: #b54708; /* orange.700 */
+  --warning-foreground: #ffffff; /* white */
+  --warning-subtle: #fff6ed; /* orange.50 */
+  --info: #175cd3; /* blue.700 */
+  --info-foreground: #ffffff; /* white */
+  --info-subtle: #eff8ff; /* blue.50 */
+  --border: #e2e2e4; /* neutral.200 */
+  --input: #8b8b92; /* neutral.500 */
+  --ring: #7a6200; /* gold.800 */
+  --link: #7a6200; /* gold.800 */
+  --method-get: #175cd3; /* blue.700 */
+  --method-get-subtle: #eff8ff; /* blue.50 */
+  --method-post: #067647; /* green.700 */
+  --method-post-subtle: #ecfdf3; /* green.50 */
+  --method-put: #b54708; /* orange.700 */
+  --method-put-subtle: #fff6ed; /* orange.50 */
+  --method-patch: #6941c6; /* purple.700 */
+  --method-patch-subtle: #f4f3ff; /* purple.50 */
+  --method-delete: #b42318; /* red.700 */
+  --method-delete-subtle: #fef3f2; /* red.50 */
+
+  /* Movimento (não muda com o tema) */
+  --duration-fast: 150ms; /* hover e foco */
+  --duration-base: 200ms; /* entrar e sair (toast, menu) */
+  --duration-slow: 300ms; /* modal e painel */
+}
+
+.dark {
+  --background: #0d0d0e; /* neutral.950 */
+  --foreground: #f8f8f8; /* neutral.50 */
+  --card: #1b1b1d; /* neutral.900 */
+  --card-foreground: #f8f8f8; /* neutral.50 */
+  --popover: #2a2a2c; /* neutral.800 */
+  --popover-foreground: #f8f8f8; /* neutral.50 */
+  --primary: #e3b400; /* gold.500 */
+  --primary-foreground: #0d0d0e; /* neutral.950 */
+  --secondary: #382d00; /* gold.950 */
+  --secondary-foreground: #f6e6a6; /* gold.100 */
+  --muted: #2a2a2c; /* neutral.800 */
+  --muted-foreground: #a0a0a6; /* neutral.400 */
+  --accent: #2a2a2c; /* neutral.800 */
+  --accent-foreground: #f8f8f8; /* neutral.50 */
+  --destructive: #f97066; /* red.400 */
+  --destructive-foreground: #0d0d0e; /* neutral.950 */
+  --destructive-subtle: #3a1512; /* red.950 */
+  --success: #47cd89; /* green.400 */
+  --success-foreground: #0d0d0e; /* neutral.950 */
+  --success-subtle: #0c2a1c; /* green.950 */
+  --warning: #fb923c; /* orange.400 */
+  --warning-foreground: #0d0d0e; /* neutral.950 */
+  --warning-subtle: #3a1d07; /* orange.950 */
+  --info: #53b1fd; /* blue.400 */
+  --info-foreground: #0d0d0e; /* neutral.950 */
+  --info-subtle: #0b2140; /* blue.950 */
+  --border: #2a2a2c; /* neutral.800 */
+  --input: #77777e; /* neutral.600 */
+  --ring: #e3b400; /* gold.500 */
+  --link: #e3b400; /* gold.500 */
+  --method-get: #53b1fd; /* blue.400 */
+  --method-get-subtle: #0b2140; /* blue.950 */
+  --method-post: #47cd89; /* green.400 */
+  --method-post-subtle: #0c2a1c; /* green.950 */
+  --method-put: #fb923c; /* orange.400 */
+  --method-put-subtle: #3a1d07; /* orange.950 */
+  --method-patch: #b692f6; /* purple.400 */
+  --method-patch-subtle: #251a45; /* purple.950 */
+  --method-delete: #f97066; /* red.400 */
+  --method-delete-subtle: #3a1512; /* red.950 */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-subtle: var(--destructive-subtle);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-subtle: var(--info-subtle);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-link: var(--link);
+  --color-method-get: var(--method-get);
+  --color-method-get-subtle: var(--method-get-subtle);
+  --color-method-post: var(--method-post);
+  --color-method-post-subtle: var(--method-post-subtle);
+  --color-method-put: var(--method-put);
+  --color-method-put-subtle: var(--method-put-subtle);
+  --color-method-patch: var(--method-patch);
+  --color-method-patch-subtle: var(--method-patch-subtle);
+  --color-method-delete: var(--method-delete);
+  --color-method-delete-subtle: var(--method-delete-subtle);
+}
+
+@theme {
+  /* Tipografia: Nunito na interface e JetBrains Mono no código. "Nunito Variable" e
+     "JetBrains Mono Variable" são os nomes que os pacotes @fontsource-variable registram. */
+  --font-sans: "Nunito Variable", "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+
+  /* Escala tipográfica: só estes tamanhos existem, e toda altura de linha é múltiplo de 4. */
+  --text-*: initial;
+  --text-xs: 0.75rem; /* 12px */
+  --text-xs--line-height: 1rem; /* 16px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-sm--line-height: 1.25rem; /* 20px */
+  --text-base: 1rem; /* 16px */
+  --text-base--line-height: 1.5rem; /* 24px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-lg--line-height: 1.75rem; /* 28px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-xl--line-height: 1.75rem; /* 28px */
+  --text-2xl: 1.5rem; /* 24px */
+  --text-2xl--line-height: 2rem; /* 32px */
+  --text-3xl: 1.75rem; /* 28px */
+  --text-3xl--line-height: 2.25rem; /* 36px */
+  --text-4xl: 2rem; /* 32px */
+  --text-4xl--line-height: 2.5rem; /* 40px */
+  --text-5xl: 2.5rem; /* 40px */
+  --text-5xl--line-height: 3rem; /* 48px */
+
+  /* Bordas: a escala de raios do Tailwind fica intacta. O projeto usa um raio só, o
+     rounded-xs (2px), em tudo; o rounded-full fica para avatar e pílula. */
+
+  /* Elevação: no tema escuro, quem dá a elevação é o tom da superfície (card, popover). */
+  --shadow-sm: 0 1px 2px rgb(13 13 14 / 0.06), 0 1px 3px rgb(13 13 14 / 0.10); /* cards */
+  --shadow-md: 0 4px 8px -2px rgb(13 13 14 / 0.10), 0 2px 4px -2px rgb(13 13 14 / 0.06); /* menus */
+  --shadow-lg: 0 12px 24px -4px rgb(13 13 14 / 0.12), 0 4px 8px -4px rgb(13 13 14 / 0.08); /* modais */
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Espaçamento: o padrão do Tailwind já é múltiplo de 4 (p-1 = 4px, p-2 = 8px...).
+     Os breakpoints também ficam no padrão (md 768, lg 1024, xl 1280); o celular é a base. */
+}
