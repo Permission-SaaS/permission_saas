@@ -58,7 +58,7 @@ O que esta disciplina acrescenta ao sistema:
 | A rubrica cobra | O enunciado (etapas) | Como fica |
 |---|---|---|
 | Exportação de dados protegida por JWT (itens 9–12) | nenhuma etapa fala em exportação | export e import do projeto completo em JSON (bloco 5) |
-| Mockup "detalhado" (item 4) | a Etapa 0 pede um mockup | Figma, com todas as telas (bloco 0) |
+| Mockup "detalhado" (item 4) | a Etapa 0 pede um mockup | 30 telas (celular em 360 px e desktop), com estados e navegação clicável, feitas pela IA com a liberação do professor (bloco 0) |
 | "Integração contínua" (item 1) | — | GitHub Actions em cada repositório (bloco 1) |
 | "Serviço RESTful fornecido" (item 2) | a Etapa 6 permite uma API própria | a própria API; o relatório explica a escolha |
 | Testes "abrangentes" do update e do delete (item 7) e da segurança (itens 11 e 16) | a Etapa 3 pede testar e validar | unidade, MockMvc e Testcontainers (blocos 2, 3 e 5) |
@@ -84,7 +84,7 @@ Tomadas pelo Jairo em 16/11/2026, num jogo de perguntas com a IA.
    Testcontainers (PostgreSQL).
 6. **Bibliotecas do front:** Axios no lugar do `httpClient`, React Hook Form + Zod no lugar do `useForm`
    e shadcn/ui. Sem Vitest.
-7. **Mockup no Figma**, com as telas novas e as atuais, já no visual do shadcn/ui.
+7. **Mockup** com as telas novas e as atuais, no visual do branding. Decidido em 16/11 no Figma, desenhado pelo Jairo; **em 17/11 o professor liberou o uso de IA para o mockup**, e o Jairo pediu que a IA o fizesse. Ficou num canvas de design do Claude (sem instalar nada, com navegação clicável e comentários); o Jairo revisa e pede os ajustes. O ambiente do Figma (`docs/branding/figma/`) continua pronto, se um dia o mockup for para lá.
 8. **Ordem: seguir as etapas do enunciado** (revisto em 16/11; a primeira escolha era o deploy cedo). O
    deploy é opcional e fica para o fim, só se sobrar folga, porque a próxima disciplina é só de deploy.
 9. **Adiantar o deploy sem fazer o deploy:** entra antes o que prepara o deploy e também conta nesta
@@ -119,9 +119,23 @@ e API em `api.<domínio>`) mantém os dois *same-site*, e o cookie continua func
 | Segurança extra (itens 10 e 14) | Bloqueio por tentativas (com os campos que o `Client` já tem); CORS por lista de origens; HTTPS e cabeçalhos de segurança (HSTS e afins) no Caddy; limite de tamanho no import | Cada item é uma camada a mais, testável e fácil de mostrar no relatório |
 | HTTPS local | Caddy no Compose, com o certificado da autoridade local dele (`tls internal`) | Mostra a comunicação criptografada sem domínio nem servidor, e o mesmo Caddy vira o do deploy, trocando só o certificado |
 | Front em Docker | Dockerfile multi-stage (build com Node, servido pelo nginx) no Compose local | Adianta o deploy e entra nos arquivos de Docker que o enunciado pede |
+| Branding | O shadcn/ui do bloco 2 parte do `tokens.css` de [`docs/branding/`](../branding/README.md) (cores dos dois temas, Nunito, escala de texto, raio único de 2 px); o tema claro é o padrão, e o escuro entra se sobrar tempo | O branding é global, para este e os próximos projetos, e já tem o contraste AA conferido por script |
 | Logout entre abas | `BroadcastChannel`, se sobrar tempo | Estava nos trabalhos futuros do relatório de React |
 | ADRs | ADR-017 (autenticação JWT e os dois esquemas); o do deploy só quando o deploy for feito, no `docs/ARCHITECTURE.md` do umbrella | O log de ADRs é único para o sistema |
 | Tag de entrega | `fullstack-entrega`, anotada, no umbrella | Segue o padrão do `react-entrega` e não colide com `etapa-*` e `arq-etapa-*` |
+
+
+### Ajustes que o mockup pede no código
+
+Decididos na revisão do mockup. Entram quando a tela correspondente for refeita (bloco 2 para o CRUD,
+bloco 4 para login e cadastro).
+
+| Ajuste | Decidido em | Onde |
+|---|---|---|
+| **Excluir em dois passos**, no celular e no desktop: (1) o aviso do que é excluído e de que não dá para desfazer; (2) digitar o nome do projeto. O botão de excluir só fica ativo quando o nome bate exatamente, com maiúsculas e minúsculas | 17/11 | `ProjectDetail` (hoje é um passo só, o modal com o nome) |
+| **O erro do nome só aparece quando o texto digitado deixa de bater com o começo do nome.** "Loja vir" não acusa nada, e "Loja V" acusa. Hoje o erro aparece a cada letra que ainda não completa o nome | 17/11 | `ProjectDetail`: hoje `hasError = confirmProjectName !== "" && !isProjectNameConfirmed`; passa a ser `confirmProjectName !== "" && !project.name.startsWith(confirmProjectName)`. O botão continua dependendo do nome exato (`isProjectNameConfirmed`) |
+| **O cabeçalho atual quebra em 360 px:** o nome do usuário e o "Sair" saem da tela, e a busca não ocupa a largura (print `entrega/prints/04-front-projetos-celular.png`). Resolve com a barra inferior e o cabeçalho fino do mockup | 17/11 | `AppLayout` e a lista de projetos |
+| **Textos na voz da marca:** "Ops!!" sai, "Deletando..." vira "Excluindo...", "Novo Projeto" vira "Novo projeto"... A tabela completa está no branding, em "Voz e tom" | 17/11 | as telas que forem refeitas |
 
 ---
 
@@ -136,7 +150,7 @@ e API em `api.<domínio>`) mantém os dois *same-site*, e o cookie continua func
    3. revisão, apontando o problema concreto e o porquê;
    4. duas ou três perguntas de fixação.
 3. **Quem faz o quê:**
-   - **Jairo:** o mockup; o que adianta o deploy (o Dockerfile do front, o CI, o Caddy e a separação das
+   - **Jairo:** a revisão do mockup (feito pela IA, com a liberação do professor); o que adianta o deploy (o Dockerfile do front, o CI, o Caddy e a separação das
      portas), porque o deploy é o assunto da próxima disciplina; o fluxo de autenticação no back (login,
      refresh com rotação, logout, regra de dono); no front, o que é novo (o interceptor de refresh do
      Axios, o primeiro formulário com React Hook Form + Zod, o primeiro componente do shadcn/ui, o
@@ -159,7 +173,7 @@ disciplina de React, então o bloco 2 as melhora em vez de construí-las.
 
 | Bloco | Etapa | Datas | O que se faz | Rubrica |
 |---|---|---|---|---|
-| 0. Ambiente e mockup | 0 | 17–20/11 | mockup no Figma com todas as telas (login, cadastro, lista, detalhe com cargos e rotas, formulário, exportar e importar); conferir o ambiente local | 1, 4 |
+| 0. Ambiente e mockup | 0 | 17–20/11 | branding; mockup com todas as telas e estados (feito pela IA, revisado pelo Jairo); conferir o ambiente local | 1, 4 |
 | 1. Docker do front e CI | 0 | 21–24/11 | diagnóstico; Dockerfile do front no Compose; portas só de desenvolvimento separadas; GitHub Actions (testes e build de api, audit, config e front). **Em paralelo:** a IA faz a auditoria de código, e no fim do bloco o Jairo escolhe os achados | 1, 3, 13 |
 | 2. Integração e CRUD | 1–3 | 25–29/11 | Axios no lugar do `httpClient`; formulários com React Hook Form + Zod; cargos e rotas para leitura no detalhe; revisão das validações; base do Testcontainers e testes do CRUD (criar, consultar, atualizar e excluir) | 2, 3, 5–8 |
 | 3. Segurança | 4 | 30/11–04/12 | diagnóstico; migration do refresh token; login, refresh, logout e `/auth/me`; regra de dono nos projetos; bloqueio por tentativas; CORS; HTTPS local com o Caddy; testes de segurança; ADR-017 | 14, 16 |
@@ -186,7 +200,13 @@ O JWT, o logout seguro, o export protegido e os testes de segurança **não são
 - [x] Enunciado separado em `README.md` e `ETAPA0..6.md` (16/11)
 - [x] Escopo e decisões definidos num jogo de perguntas (16/11)
 - [x] Plano aprovado e reordenado para seguir as etapas, com o deploy no fim (16/11)
-- [ ] **Bloco 0:** mockup no Figma; ambiente local conferido
+- [x] Branding em `docs/branding/` (17/11)
+- [x] Professor liberou a IA para o mockup (17/11)
+- [x] **Bloco 0** (17/11):
+  - [x] mockup no [canvas](https://claude.ai/artifact/5CUHCznKRK51vLerPZfoVq): 26 telas no celular e 9 no desktop, com a exclusão em dois passos; revisado e aprovado pelo Jairo
+  - [x] as 35 telas em PNG em `entrega/mockup/` (celular em 2x, desktop em 1x)
+  - [x] ambiente conferido, com 4 prints em `entrega/prints/`: a API respondendo (`/actuator/health`), a lista de projetos no front, a mesma chamada pelo proxy do Vite (`/api/projects`) e o front atual em 360 px. Os prints usaram um PostgreSQL temporário com dados de demonstração, apagado depois; o banco local do Jairo não foi tocado
+  - [ ] compartilhar o canvas com o professor (só leitura) e guardar o link para o PDF
 - [ ] **Bloco 1:** diagnóstico; Dockerfile do front; portas de desenvolvimento separadas; CI; auditoria
       de código (IA) e escolha dos achados
 - [ ] **Bloco 2:** Axios; React Hook Form + Zod; cargos e rotas no detalhe; validações; testes do CRUD
@@ -212,6 +232,10 @@ Ferramenta: **Claude Code**, da Anthropic.
 | Data | Parte | Como a IA foi usada |
 |---|---|---|
 | 16/11/2026 | Enunciado e plano | Formatou o enunciado em Markdown e o separou por etapa; confrontou o enunciado com a rubrica e apontou a exportação de dados, que só a rubrica cobra; leu o código para levantar o que já existe. Conduziu um jogo de perguntas com as opções de cada decisão (sessão JWT, login, exportação, deploy, CI/CD, testes, bibliotecas, mockup, HTTPS, refatoração, ordem e cortes) e montou este plano a partir das minhas respostas. Depois, a meu pedido, reordenou o plano para seguir as etapas, com o deploy no fim, e separou o que adianta o deploy. As escolhas foram minhas |
+| 17/11/2026 | Bloco 0 | Explicou o que é um mockup (wireframe, mockup e protótipo) e as boas práticas de design de interface que a rubrica cobra, com a analogia da planta de uma casa; conduziu um jogo de perguntas sobre as telas (fidelidade, navegação, card, detalhe, importar e exportar, sessão expirada, cadastro, lista vazia, conta) e criou um checklist do bloco com as decisões. A escolha do mobile first e as demais decisões foram minhas |
+| 17/11/2026 | Bloco 0 (branding) | A partir das cinco cores e das regras que escolhi (sem serifa e arredondada, espaçamentos em múltiplos de 4 e, depois de eu revisar, um raio único de 2 px, mantendo a escala do Tailwind), gerou o branding em `docs/branding/`: as escalas de cor, as cores semânticas dos dois temas, a escala tipográfica, o espaçamento, as bordas, a elevação, o movimento, os ícones, as cores dos métodos HTTP e a voz e tom; escreveu o `contrast.py`, que calcula o contraste WCAG de cada par e confere os tokens. Apontou que o dourado não pode ser texto no tema claro (1,83:1) e que o aviso não podia ser amarelo. Preparou o ambiente do Figma: os arquivos para o plugin Tokens Studio (gerados do `tokens.json` por um script) e o passo a passo para o plano gratuito, pelo navegador. O tema claro como padrão, a Nunito, o laranja no aviso e a largura de 360 px foram escolhas minhas; as telas do mockup são desenhadas por mim |
+| 17/11/2026 | Bloco 0 (mockup) | Com a liberação do professor para usar IA no mockup, e a meu pedido, desenhou o mockup num canvas de design do Claude: 30 telas, 24 no celular (360 px) e 6 no desktop (1440 px), com os estados de carregando, vazio, erro e sucesso, e links entre as telas para navegar. Partiu das decisões de tela que tomei no jogo de perguntas e do branding. Propôs como a matriz de concessões fica no celular (um cargo por vez). A revisão das telas é minha |
+| 17/11/2026 | Bloco 0 (fechamento) | A meu pedido, gerou as 35 telas do mockup em PNG num Chrome sem janela e tirou os 4 prints do ambiente com um script que sobe o front, faz o login de demonstração e captura as telas. Para os prints, rodou a API contra um PostgreSQL temporário com dados de demonstração e apagou tudo depois. Apontou que o cabeçalho do front atual quebra em 360 px; o ajuste ficou para o bloco 2 |
 
 ---
 
