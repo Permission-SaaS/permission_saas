@@ -786,3 +786,52 @@ mas o time do React descontinuou o CRA em 14/02/2025, e ele não recebe mais man
 
 **Consequência:** o item 2 da rubrica não é seguido ao pé da letra, e o relatório da disciplina cita
 esta decisão.
+
+---
+
+## ADR-017: bibliotecas do front — shadcn/ui com Sonner, React Hook Form com Zod, Axios e Zustand
+
+**Status:** aceito em 17/11/2026, no início da disciplina de Desenvolvimento Full Stack com React e
+Spring Boot. Cada biblioteca entra no bloco do plano em que é usada pela primeira vez, e não antes.
+
+**Contexto:** na disciplina de React, o front usou código próprio onde uma biblioteca resolveria, para
+aprender o que cada uma faz por dentro: o `httpClient` sobre o `fetch`, o `useForm`, o
+`NotificationContext` com o `Toast`. A sessão ficou no Redux Toolkit, porque a rubrica pedia Redux. O
+relatório listou a troca dessas peças como trabalho futuro. A disciplina Full Stack traz o login com JWT
+(o access token na memória e o refresh token em cookie) e telas novas no visual do branding
+(`docs/branding/`).
+
+**Decisão:**
+
+| Hoje | Passa a ser | Entra no |
+|---|---|---|
+| componentes escritos à mão com Tailwind | **shadcn/ui**, com as cores e fontes do `docs/branding/tokens.css` e o raio de 2 px | bloco 2 |
+| `NotificationContext` + `Toast` próprios | **Sonner**, pelo componente do shadcn/ui | bloco 2 |
+| `httpClient` sobre o `fetch` | **Axios**, com interceptors (o de renovar o token entra no bloco 4) | bloco 2 |
+| `useForm` próprio e validação à mão (`validateProject`, `validateLogin`) | **React Hook Form + Zod**: o schema do Zod valida o formulário e também gera o tipo do TypeScript | bloco 2 (login e cadastro no bloco 4) |
+| Redux Toolkit (`authSlice`, `store.ts`) | **Zustand** | bloco 4, junto com a sessão do JWT |
+
+**Por quê:**
+
+- O código próprio cumpriu o papel de ensinar. Daqui para a frente, bibliotecas mantidas pela
+  comunidade são menos código para manter e testar, e cada uma resolve o seu problema melhor do que a
+  versão caseira (cancelamento e interceptors no Axios, validação declarativa no Zod, acessibilidade nos
+  componentes do shadcn/ui).
+- **Zustand no lugar do Redux:** o estado global do front é pequeno, só a sessão (o usuário e o access
+  token); os dados da API ficam no React Query. O Zustand não precisa de Provider, actions nem reducers,
+  e o estado pode ser lido e trocado fora dos componentes (`useAuthStore.getState()`), que é exatamente o
+  que o interceptor do Axios precisa para pôr e renovar o token.
+- **Sonner:** é o toast que o shadcn/ui passou a indicar no lugar do componente de toast dele.
+- **A sessão só migra no bloco 4:** hoje ela é a sessão simulada da disciplina de React, que será
+  reescrita para o JWT. Migrar antes seria trocar duas vezes o mesmo código.
+
+**Consequências:**
+
+- **Se o estado global crescer** (várias fatias que dependem umas das outras, fluxos complexos ou a
+  necessidade das ferramentas de depuração do Redux), a volta ao Redux Toolkit é reavaliada num ADR novo.
+- A evidência da disciplina de React (o Redux, o `useForm` próprio, o `httpClient`) continua na tag
+  `react-entrega`. O código do `main` pode mudar, pela regra do projeto para disciplinas já entregues.
+- O `ErrorBoundary` continua sendo um componente de classe escrito à mão: no React 19, error boundary
+  ainda só existe como classe.
+- Os componentes do shadcn/ui vêm com `rounded-md`, `rounded-lg` e `rounded-xl`. Ao instalar cada um,
+  essas classes são trocadas por `rounded-xs`, o raio único do branding.

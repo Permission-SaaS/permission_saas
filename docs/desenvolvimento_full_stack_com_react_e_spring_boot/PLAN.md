@@ -82,8 +82,11 @@ Tomadas pelo Jairo em 16/11/2026, num jogo de perguntas com a IA.
    leitura**, para mostrar o resultado do import.
 5. **Testes do back-end:** unidade nos casos de uso, MockMvc com Spring Security e integração com
    Testcontainers (PostgreSQL).
-6. **Bibliotecas do front:** Axios no lugar do `httpClient`, React Hook Form + Zod no lugar do `useForm`
-   e shadcn/ui. Sem Vitest.
+6. **Bibliotecas do front** (ADR-017): Axios no lugar do `httpClient`, React Hook Form + Zod no lugar do
+   `useForm`, shadcn/ui com **Sonner** no lugar do `NotificationContext` e, decidido em 17/11, **Zustand no
+   lugar do Redux** para a sessão (volta ao Redux se o estado global crescer). Cada uma entra no bloco em que
+   é usada: o Zustand só no bloco 4, junto com a sessão do JWT, para não migrar duas vezes a sessão
+   simulada. Sem Vitest.
 7. **Mockup** com as telas novas e as atuais, no visual do branding. Decidido em 16/11 no Figma, desenhado pelo Jairo; **em 17/11 o professor liberou o uso de IA para o mockup**, e o Jairo pediu que a IA o fizesse. Ficou num canvas de design do Claude (sem instalar nada, com navegação clicável e comentários); o Jairo revisa e pede os ajustes. O ambiente do Figma (`docs/branding/figma/`) continua pronto, se um dia o mockup for para lá.
 8. **Ordem: seguir as etapas do enunciado** (revisto em 16/11; a primeira escolha era o deploy cedo). O
    deploy é opcional e fica para o fim, só se sobrar folga, porque a próxima disciplina é só de deploy.
@@ -113,7 +116,7 @@ e API em `api.<domínio>`) mantém os dois *same-site*, e o cookie continua func
 | Tema | Recomendação | Motivo |
 |---|---|---|
 | Validação do JWT | `spring-boot-starter-oauth2-resource-server` (`NimbusJwtDecoder`, HS256), com o segredo vindo de variável sem default (ADR-012); o jjwt sai do pom | É o caminho padrão do Spring Security, e o filtro escrito à mão repetiria o que ele já faz |
-| Esquemas de autenticação | O JWT protege o painel (`/projects/**`, `/auth/**`, `/clients/me`); o `POST /validate-permission` continua com `ApiKey` | O painel é usado por pessoas; o `validate-permission` é chamado de sistema para sistema. Vira o ADR-017 |
+| Esquemas de autenticação | O JWT protege o painel (`/projects/**`, `/auth/**`, `/clients/me`); o `POST /validate-permission` continua com `ApiKey` | O painel é usado por pessoas; o `validate-permission` é chamado de sistema para sistema. Vira o ADR-018 |
 | Projeto de outro cliente | Responde **404**, não 403 | Não revela que o id existe |
 | Endpoints novos | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`, `GET /projects/{id}/export`, `POST /projects/import` | **Breaking change:** o `clientId` sai do corpo do `POST /projects` e passa a vir do token |
 | Segurança extra (itens 10 e 14) | Bloqueio por tentativas (com os campos que o `Client` já tem); CORS por lista de origens; HTTPS e cabeçalhos de segurança (HSTS e afins) no Caddy; limite de tamanho no import | Cada item é uma camada a mais, testável e fácil de mostrar no relatório |
@@ -121,7 +124,7 @@ e API em `api.<domínio>`) mantém os dois *same-site*, e o cookie continua func
 | Front em Docker | Dockerfile multi-stage (build com Node, servido pelo nginx) no Compose local | Adianta o deploy e entra nos arquivos de Docker que o enunciado pede |
 | Branding | O shadcn/ui do bloco 2 parte do `tokens.css` de [`docs/branding/`](../branding/README.md) (cores dos dois temas, Nunito, escala de texto, raio único de 2 px); o tema claro é o padrão, e o escuro entra se sobrar tempo | O branding é global, para este e os próximos projetos, e já tem o contraste AA conferido por script |
 | Logout entre abas | `BroadcastChannel`, se sobrar tempo | Estava nos trabalhos futuros do relatório de React |
-| ADRs | ADR-017 (autenticação JWT e os dois esquemas); o do deploy só quando o deploy for feito, no `docs/ARCHITECTURE.md` do umbrella | O log de ADRs é único para o sistema |
+| ADRs | ADR-017 (bibliotecas do front, escrito em 17/11); ADR-018 (autenticação JWT e os dois esquemas); o do deploy só quando o deploy for feito, no `docs/ARCHITECTURE.md` do umbrella | O log de ADRs é único para o sistema |
 | Tag de entrega | `fullstack-entrega`, anotada, no umbrella | Segue o padrão do `react-entrega` e não colide com `etapa-*` e `arq-etapa-*` |
 
 
@@ -153,8 +156,8 @@ bloco 4 para login e cadastro).
    - **Jairo:** a revisão do mockup (feito pela IA, com a liberação do professor); o que adianta o deploy (o Dockerfile do front, o CI, o Caddy e a separação das
      portas), porque o deploy é o assunto da próxima disciplina; o fluxo de autenticação no back (login,
      refresh com rotação, logout, regra de dono); no front, o que é novo (o interceptor de refresh do
-     Axios, o primeiro formulário com React Hook Form + Zod, o primeiro componente do shadcn/ui, o
-     download e o upload de arquivo); os testes de segurança.
+     Axios, o primeiro formulário com React Hook Form + Zod, o primeiro componente do shadcn/ui, a store
+     da sessão em Zustand, o download e o upload de arquivo); os testes de segurança.
    - **IA:** o plano e a documentação, a auditoria de código e o que o Jairo já sabe fazer: a troca do
      `httpClient` pelo Axios, a migração dos formulários seguintes, migrations, propriedades, CORS, DTOs e
      mappers, a base do Testcontainers e os testes do CRUD que seguem o padrão já existente. Cada trecho
@@ -175,9 +178,9 @@ disciplina de React, então o bloco 2 as melhora em vez de construí-las.
 |---|---|---|---|---|
 | 0. Ambiente e mockup | 0 | 17–20/11 | branding; mockup com todas as telas e estados (feito pela IA, revisado pelo Jairo); conferir o ambiente local | 1, 4 |
 | 1. Docker do front e CI | 0 | 21–24/11 | diagnóstico; Dockerfile do front no Compose; portas só de desenvolvimento separadas; GitHub Actions (testes e build de api, audit, config e front). **Em paralelo:** a IA faz a auditoria de código, e no fim do bloco o Jairo escolhe os achados | 1, 3, 13 |
-| 2. Integração e CRUD | 1–3 | 25–29/11 | Axios no lugar do `httpClient`; formulários com React Hook Form + Zod; cargos e rotas para leitura no detalhe; revisão das validações; base do Testcontainers e testes do CRUD (criar, consultar, atualizar e excluir) | 2, 3, 5–8 |
+| 2. Integração e CRUD | 1–3 | 25–29/11 | **fundação do front:** shadcn/ui com os tokens e as fontes do branding, Sonner no lugar do `NotificationContext`; Axios no lugar do `httpClient`; formulários com React Hook Form + Zod; cargos e rotas para leitura no detalhe; revisão das validações; base do Testcontainers e testes do CRUD (criar, consultar, atualizar e excluir) | 2, 3, 5–8 |
 | 3. Segurança | 4 | 30/11–04/12 | diagnóstico; migration do refresh token; login, refresh, logout e `/auth/me`; regra de dono nos projetos; bloqueio por tentativas; CORS; HTTPS local com o Caddy; testes de segurança; ADR-017 | 14, 16 |
-| 4. JWT no front e logout seguro | 5 | 05–07/12 | interceptor de refresh do Axios; login e cadastro de verdade com shadcn/ui; logout chamando a API; o token fora do `localStorage`; sai o `VITE_DEV_CLIENT_ID`; o CRUD funcionando com o JWT | 6, 8, 15 |
+| 4. JWT no front e logout seguro | 5 | 05–07/12 | a sessão em Zustand no lugar do Redux; interceptor de refresh do Axios; login e cadastro de verdade com shadcn/ui; logout chamando a API; o token fora do `localStorage`; sai o `VITE_DEV_CLIENT_ID`; o CRUD funcionando com o JWT | 6, 8, 15 |
 | 5. Exportar, importar e refatorar | 5 | 08–11/12 | export e import do projeto em JSON, com dono, validação e limite de tamanho; testes de segurança da exportação; botões no front; os achados da auditoria escolhidos no bloco 1 | 9–13 |
 | 6. Fechamento | 7 | 12–13/12 | prints; `ENTREGA.md` (visão geral, como rodar localmente, Docker, testes, link do código de cada funcionalidade); o PDF `jaironeto_desenvolvimentofullstackcomreactespringboot_pd.pdf`; a seção "Uso de IA" do README; a tag `fullstack-entrega` | todas |
 | Envio | — | 14/12, depois das 07:00 | o Jairo posta o PDF no Moodle | — |
@@ -202,6 +205,7 @@ O JWT, o logout seguro, o export protegido e os testes de segurança **não são
 - [x] Plano aprovado e reordenado para seguir as etapas, com o deploy no fim (16/11)
 - [x] Branding em `docs/branding/` (17/11)
 - [x] Professor liberou a IA para o mockup (17/11)
+- [x] ADR-017, das bibliotecas do front (17/11)
 - [x] **Bloco 0** (17/11):
   - [x] mockup no [canvas](https://claude.ai/artifact/5CUHCznKRK51vLerPZfoVq): 26 telas no celular e 9 no desktop, com a exclusão em dois passos; revisado e aprovado pelo Jairo
   - [x] as 35 telas em PNG em `entrega/mockup/` (celular em 2x, desktop em 1x)
@@ -209,9 +213,9 @@ O JWT, o logout seguro, o export protegido e os testes de segurança **não são
   - [x] canvas aberto para quem tiver o link (17/11); é o link do PDF e o que vai para o professor: <https://claude.ai/artifact/5CUHCznKRK51vLerPZfoVq#page-01487ea111e7>
 - [ ] **Bloco 1:** diagnóstico; Dockerfile do front; portas de desenvolvimento separadas; CI; auditoria
       de código (IA) e escolha dos achados
-- [ ] **Bloco 2:** Axios; React Hook Form + Zod; cargos e rotas no detalhe; validações; testes do CRUD
-- [ ] **Bloco 3:** diagnóstico; JWT no back-end; regra de dono; HTTPS local; testes de segurança; ADR-017
-- [ ] **Bloco 4:** JWT no front; login e cadastro; logout seguro
+- [ ] **Bloco 2:** shadcn/ui e Sonner; Axios; React Hook Form + Zod; cargos e rotas no detalhe; validações; testes do CRUD
+- [ ] **Bloco 3:** diagnóstico; JWT no back-end; regra de dono; HTTPS local; testes de segurança; ADR-018
+- [ ] **Bloco 4:** sessão em Zustand; JWT no front; login e cadastro; logout seguro
 - [ ] **Bloco 5:** exportar e importar; refatoração
 - [ ] **Bloco 6:** `ENTREGA.md`, prints, PDF, tag `fullstack-entrega`
 - [ ] PDF postado no Moodle (14/12, a partir das 07:00)
@@ -236,6 +240,7 @@ Ferramenta: **Claude Code**, da Anthropic.
 | 17/11/2026 | Bloco 0 (branding) | A partir das cinco cores e das regras que escolhi (sem serifa e arredondada, espaçamentos em múltiplos de 4 e, depois de eu revisar, um raio único de 2 px, mantendo a escala do Tailwind), gerou o branding em `docs/branding/`: as escalas de cor, as cores semânticas dos dois temas, a escala tipográfica, o espaçamento, as bordas, a elevação, o movimento, os ícones, as cores dos métodos HTTP e a voz e tom; escreveu o `contrast.py`, que calcula o contraste WCAG de cada par e confere os tokens. Apontou que o dourado não pode ser texto no tema claro (1,83:1) e que o aviso não podia ser amarelo. Preparou o ambiente do Figma: os arquivos para o plugin Tokens Studio (gerados do `tokens.json` por um script) e o passo a passo para o plano gratuito, pelo navegador. O tema claro como padrão, a Nunito, o laranja no aviso e a largura de 360 px foram escolhas minhas; as telas do mockup são desenhadas por mim |
 | 17/11/2026 | Bloco 0 (mockup) | Com a liberação do professor para usar IA no mockup, e a meu pedido, desenhou o mockup num canvas de design do Claude: 30 telas, 24 no celular (360 px) e 6 no desktop (1440 px), com os estados de carregando, vazio, erro e sucesso, e links entre as telas para navegar. Partiu das decisões de tela que tomei no jogo de perguntas e do branding. Propôs como a matriz de concessões fica no celular (um cargo por vez). A revisão das telas é minha |
 | 17/11/2026 | Bloco 0 (fechamento) | A meu pedido, gerou as 35 telas do mockup em PNG num Chrome sem janela e tirou os 4 prints do ambiente com um script que sobe o front, faz o login de demonstração e captura as telas. Para os prints, rodou a API contra um PostgreSQL temporário com dados de demonstração e apagou tudo depois. Apontou que o cabeçalho do front atual quebra em 360 px; o ajuste ficou para o bloco 2 |
+| 17/11/2026 | ADR-017 | A meu pedido, avaliou se valia deixar as bibliotecas do front prontas antes dos blocos e recomendou registrar a decisão agora e instalar cada uma no bloco em que é usada (o Zustand só no bloco 4, para não migrar duas vezes a sessão simulada); escreveu o ADR-017. A escolha das bibliotecas (Sonner, React Hook Form, Zod e o Zustand no lugar do Redux) foi minha |
 
 ---
 
