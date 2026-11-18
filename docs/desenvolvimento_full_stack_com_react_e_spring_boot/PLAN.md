@@ -206,7 +206,7 @@ O JWT, o logout seguro, o export protegido e os testes de segurança **não são
   - [x] mockup no [canvas](https://claude.ai/artifact/5CUHCznKRK51vLerPZfoVq): 26 telas no celular e 9 no desktop, com a exclusão em dois passos; revisado e aprovado pelo Jairo
   - [x] as 35 telas em PNG em `entrega/mockup/` (celular em 2x, desktop em 1x)
   - [x] ambiente conferido, com 4 prints em `entrega/prints/`: a API respondendo (`/actuator/health`), a lista de projetos no front, a mesma chamada pelo proxy do Vite (`/api/projects`) e o front atual em 360 px. Os prints usaram um PostgreSQL temporário com dados de demonstração, apagado depois; o banco local do Jairo não foi tocado
-  - [ ] compartilhar o canvas com o professor (só leitura) e guardar o link para o PDF
+  - [x] canvas aberto para quem tiver o link (17/11); é o link do PDF e o que vai para o professor: <https://claude.ai/artifact/5CUHCznKRK51vLerPZfoVq#page-01487ea111e7>
 - [ ] **Bloco 1:** diagnóstico; Dockerfile do front; portas de desenvolvimento separadas; CI; auditoria
       de código (IA) e escolha dos achados
 - [ ] **Bloco 2:** Axios; React Hook Form + Zod; cargos e rotas no detalhe; validações; testes do CRUD
