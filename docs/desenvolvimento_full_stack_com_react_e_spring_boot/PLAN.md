@@ -103,7 +103,9 @@ Tomadas pelo Jairo em 16/11/2026, num jogo de perguntas com a IA.
     **confirmada quando o deploy começar**, porque o enunciado da próxima disciplina pode pedir outra
     plataforma.
 11. **Refatoração com auditoria primeiro:** a IA revisa a API e o front e entrega os achados com motivo e
-    esforço, e o Jairo escolhe o que entra.
+    esforço, e o Jairo escolhe o que entra. **Em 18/11 ele escolheu todos:** os que se ligam à disciplina
+    entram no bloco em que aquele código já vai ser mexido, e os outros ficam numa fila para os dias de
+    folga. A lista, com o bloco de cada achado, está em [`AUDITORIA.md`](AUDITORIA.md).
 12. **Modo de trabalho:** o mesmo da disciplina de React (ver [Como vamos trabalhar](#como-vamos-trabalhar)).
 
 **O cookie do refresh token sem deploy:** em desenvolvimento, o proxy do Vite deixa o front e a API na
@@ -179,10 +181,10 @@ disciplina de React, então o bloco 2 as melhora em vez de construí-las.
 |---|---|---|---|---|
 | 0. Ambiente e mockup | 0 | 17–20/11 | branding; mockup com todas as telas e estados (feito pela IA, revisado pelo Jairo); conferir o ambiente local | 1, 4 |
 | 1. Docker do front e CI | 0 | 21–24/11 | diagnóstico; Dockerfile do front no Compose; portas só de desenvolvimento separadas; GitHub Actions (testes e build de api, audit, config e front). **Em paralelo:** a IA faz a auditoria de código, e no fim do bloco o Jairo escolhe os achados | 1, 3, 13 |
-| 2. Integração e CRUD | 1–3 | 25–29/11 | **fundação do front:** shadcn/ui com os tokens e as fontes do branding, Sonner no lugar do `NotificationContext`; Axios no lugar do `httpClient`; formulários com React Hook Form + Zod; cargos e rotas para leitura no detalhe; revisão das validações; base do Testcontainers e testes do CRUD (criar, consultar, atualizar e excluir) | 2, 3, 5–8 |
-| 3. Segurança | 4 | 30/11–04/12 | diagnóstico; migration do refresh token; login, refresh, logout e `/auth/me`; regra de dono nos projetos; bloqueio por tentativas; CORS; HTTPS local com o Caddy; testes de segurança; ADR-017 | 14, 16 |
-| 4. JWT no front e logout seguro | 5 | 05–07/12 | a sessão em Zustand no lugar do Redux; interceptor de refresh do Axios; login e cadastro de verdade com shadcn/ui; logout chamando a API; o token fora do `localStorage`; sai o `VITE_DEV_CLIENT_ID`; o CRUD funcionando com o JWT | 6, 8, 15 |
-| 5. Exportar, importar e refatorar | 5 | 08–11/12 | export e import do projeto em JSON, com dono, validação e limite de tamanho; testes de segurança da exportação; botões no front; os achados da auditoria escolhidos no bloco 1 | 9–13 |
+| 2. Integração e CRUD | 1–3 | 25–29/11 | **fundação do front:** shadcn/ui com os tokens e as fontes do branding, Sonner no lugar do `NotificationContext`; Axios no lugar do `httpClient`; formulários com React Hook Form + Zod; cargos e rotas para leitura no detalhe; revisão das validações; base do Testcontainers e testes do CRUD (criar, consultar, atualizar e excluir); achados A01–A04 da auditoria | 2, 3, 5–8 |
+| 3. Segurança | 4 | 30/11–04/12 | diagnóstico; migration do refresh token; login, refresh, logout e `/auth/me`; regra de dono nos projetos; bloqueio por tentativas; CORS; HTTPS local com o Caddy; testes de segurança; ADR-018; achados A05–A08 | 14, 16 |
+| 4. JWT no front e logout seguro | 5 | 05–07/12 | a sessão em Zustand no lugar do Redux; interceptor de refresh do Axios; login e cadastro de verdade com shadcn/ui; logout chamando a API; o token fora do `localStorage`; sai o `VITE_DEV_CLIENT_ID`; o CRUD funcionando com o JWT; achado A09 | 6, 8, 15 |
+| 5. Exportar, importar e refatorar | 5 | 08–11/12 | export e import do projeto em JSON, com dono, validação e limite de tamanho; testes de segurança da exportação; botões no front; achados A10–A12 e, com folga, os da fila (A13–A17) | 9–13 |
 | 6. Fechamento | 7 | 12–13/12 | prints; `ENTREGA.md` (visão geral, como rodar localmente, Docker, testes, link do código de cada funcionalidade); o PDF `jaironeto_desenvolvimentofullstackcomreactespringboot_pd.pdf`; a seção "Uso de IA" do README; a tag `fullstack-entrega` | todas |
 | Envio | — | 14/12, depois das 07:00 | o Jairo posta o PDF no Moodle | — |
 | Deploy | 6 (opcional) | só com folga | a stack no ar (decisão 10). Sem folga, vai para a próxima disciplina, e o relatório explica que o deploy foi adiantado (Docker, CI, Caddy) mas não feito | — |
@@ -195,7 +197,8 @@ O JWT, o logout seguro, o export protegido e os testes de segurança **não são
 2. **A reforma visual das telas atuais.** O shadcn/ui entra só nas telas novas (login, cadastro,
    exportar e importar).
 3. **O logout entre abas.**
-4. **Os achados de menor impacto da auditoria.** Ficam só os de segurança e os de maior impacto.
+4. **A fila de folga da auditoria (A13–A17)**, e depois os achados de menor impacto dos blocos. Ficam só
+   os de segurança e os de maior impacto.
 
 ---
 
@@ -216,6 +219,9 @@ O JWT, o logout seguro, o export protegido e os testes de segurança **não são
       celular e 10 no desktop), e os PNGs dessas telas foram refeitos (36 em `entrega/mockup/`)
 - [ ] **Bloco 1:** diagnóstico; Dockerfile do front; portas de desenvolvimento separadas; CI; auditoria
       de código (IA) e escolha dos achados
+  - [x] auditoria, 1ª passada (bugs), com o `/code-review` sobre a API e o front; o Jairo escolheu todos os
+        achados e eles foram distribuídos pelos blocos em [`AUDITORIA.md`](AUDITORIA.md) (18/11)
+  - [ ] auditoria, 2ª passada (desenho do código)
 - [ ] **Bloco 2:** shadcn/ui e Sonner; Axios; React Hook Form + Zod; cargos e rotas no detalhe; validações; testes do CRUD
 - [ ] **Bloco 3:** diagnóstico; JWT no back-end; regra de dono; HTTPS local; testes de segurança; ADR-018
 - [ ] **Bloco 4:** sessão em Zustand; JWT no front; login e cadastro; logout seguro
@@ -245,6 +251,7 @@ Ferramenta: **Claude Code**, da Anthropic.
 | 17/11/2026 | Bloco 0 (fechamento) | A meu pedido, gerou as 35 telas do mockup em PNG num Chrome sem janela e tirou os 4 prints do ambiente com um script que sobe o front, faz o login de demonstração e captura as telas. Para os prints, rodou a API contra um PostgreSQL temporário com dados de demonstração e apagou tudo depois. Apontou que o cabeçalho do front atual quebra em 360 px; o ajuste ficou para o bloco 2 |
 | 17/11/2026 | ADR-017 | A meu pedido, avaliou se valia deixar as bibliotecas do front prontas antes dos blocos e recomendou registrar a decisão agora e instalar cada uma no bloco em que é usada (o Zustand só no bloco 4, para não migrar duas vezes a sessão simulada); escreveu o ADR-017. A escolha das bibliotecas (Sonner, React Hook Form, Zod e o Zustand no lugar do Redux) foi minha |
 | 18/11/2026 | Mockup (sheets) | A meu pedido, trocou as telas de criar e editar projeto por sheets (de baixo no celular e pela direita no desktop), desenhou o sheet de editar no desktop, que não existia, e refez os PNGs dessas telas; depois, a meu pedido, pôs no celular a alça para fechar o sheet arrastando para baixo. Corrigiu dois links do desktop que levavam à tela errada (o Editar do detalhe abria o formulário de criar, e os cards da lista abriam o detalhe do celular) e registrou o ajuste no código. A ideia de usar sheets foi minha |
+| 18/11/2026 | Bloco 1 (auditoria) | A meu pedido, rodou o `/code-review` do Claude Code sobre a API e o front enquanto eu estudava o Docker, conferiu no código os achados mais graves e montou o `AUDITORIA.md` com o motivo e o esforço de cada um, somando as duas limitações já registradas no `DOMAIN.md`. Escolhi corrigir todos; a distribuição pelos blocos seguiu o tema da disciplina, e os de fora do tema ficaram numa fila para os dias de folga |
 
 ---
 
