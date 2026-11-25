@@ -9,7 +9,7 @@ O sistema é **um monolito modular mais serviços extraídos dele**, cada aplica
 | [`permission_saas_api`](https://github.com/Permission-SaaS/permission_saas_api) | `permission-service` | 8080 | A aplicação principal: monolito modular com `identity`, `billing`, `project`, `permission` e o cliente de `audit` | [`docs/ARCHITECTURE.md`](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/ARCHITECTURE.md) |
 | [`permission_saas_audit`](https://github.com/Permission-SaaS/permission_saas_audit) | `audit-service` | 8081 | A trilha de auditoria, com banco próprio | [`docs/ARCHITECTURE.md`](https://github.com/Permission-SaaS/permission_saas_audit/blob/main/docs/ARCHITECTURE.md) |
 | [`permission_saas_config`](https://github.com/Permission-SaaS/permission_saas_config) | `config-server` | 8888 | O Config Server; os arquivos que ele serve ficam no `config-repo/` daqui | [`README.md`](https://github.com/Permission-SaaS/permission_saas_config#readme) |
-| [`permission_saas_front`](https://github.com/Permission-SaaS/permission_saas_front) | — | — | O front-end: React, TypeScript, Vite e Tailwind CSS (ADR-016), com o CRUD de projetos, o login simulado e as rotas privadas. Consome o `permission-service` e fica fora do Docker Compose por enquanto | [`README.md`](https://github.com/Permission-SaaS/permission_saas_front#readme) |
+| [`permission_saas_front`](https://github.com/Permission-SaaS/permission_saas_front) | — (serviço `front` no Compose) | 3000 | O front-end: React, TypeScript, Vite e Tailwind CSS (ADR-016), com o CRUD de projetos, o login simulado e as rotas privadas. No Compose, o nginx serve o build e repassa o `/api` ao `permission-service` | [`README.md`](https://github.com/Permission-SaaS/permission_saas_front#readme) |
 
 A extração segue o padrão *Strangler Fig* — uma capacidade de cada vez, começando pela mais desacoplada — em vez de reescrever o monolito inteiro em serviços. O primeiro serviço extraído foi o `audit` (ADR-008 e ADR-010). Desde a etapa 3 da disciplina de microsserviços, o `config-server` serve a configuração de ambiente dos dois serviços no profile `prod` (ADR-011 e ADR-012), e as aplicações sobem juntas pelo Docker Compose, com um banco por serviço e o RabbitMQ.
 
@@ -22,6 +22,7 @@ A extração segue o padrão *Strangler Fig* — uma capacidade de cada vez, com
 | `permission-service` → `audit-service` | RabbitMQ, fila `audit.events`, assíncrono | Gravar cada validação de permissão na trilha | ADR-013 |
 | `permission-service` → `audit-service` | HTTP, OpenFeign | Consultar a trilha (`GET /audit-events`) | ADR-010 |
 | `permission-service`, `audit-service` → `config-server` | HTTP, só na subida e só no profile `prod` | Receber endereços e log de SQL | ADR-012 |
+| navegador → `front` → `permission-service` | HTTP: o navegador chama `/api/...` no mesmo endereço do front, e o nginx repassa para `permission-service:8080` sem o prefixo | O CRUD de projetos, sem CORS, porque para o navegador tudo vem do mesmo endereço; é o mesmo papel do proxy do Vite em desenvolvimento | — |
 
 Os contratos são os DTOs e a mensagem documentados no [`API.md` do `audit-service`](https://github.com/Permission-SaaS/permission_saas_audit/blob/main/docs/API.md). Não há biblioteca compartilhada entre os repositórios: o que os dois lados têm em comum é copiado (ADR-008, "Duplicação consciente").
 

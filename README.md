@@ -42,10 +42,11 @@ docker compose up -d --build
 | `postgres`           | 5432  | banco da aplicação principal                                 |
 | `audit-postgres`     | 5433  | banco do `audit-service`                                     |
 | `rabbitmq`           | 5672  | broker de mensagens; painel em http://localhost:15672 (`saas`/`saas123`) |
+| `front`              | 3000  | front-end em React, servido pelo nginx em http://localhost:3000 |
 
 ```bash
 curl http://localhost:8080/ping                  # pong
-docker compose ps                                # os seis como "healthy"
+docker compose ps                                # os sete como "healthy"
 ```
 
 O caminho feliz completo (cliente → plano → ApiKey → projeto → validação → auditoria) está na pasta
@@ -53,7 +54,9 @@ O caminho feliz completo (cliente → plano → ApiKey → projeto → validaç�
 `API.md` [da aplicação principal](https://github.com/Permission-SaaS/permission_saas_api/blob/main/docs/API.md) e [do `audit-service`](https://github.com/Permission-SaaS/permission_saas_audit/blob/main/docs/API.md). Profiles, variáveis de ambiente, rodar fora do Docker, debug,
 testes e o que fazer com a porta 5432 ocupada: [`docs/RUNNING.md`](docs/RUNNING.md).
 
-O front-end ainda fica fora do Compose e roda com o Node, com a API no ar: os passos estão no
+Para criar projetos pelo front, o `.env` precisa do `VITE_DEV_CLIENT_ID`, o id de um cliente cadastrado
+(o `GET /clients` lista os clientes); depois de mudá-lo, rode `docker compose up -d --build front`. Para
+desenvolver o front com recarga automática, rode-o com o Node: os passos estão no
 [`README.md` do `permission_saas_front`](https://github.com/Permission-SaaS/permission_saas_front#readme).
 
 ```

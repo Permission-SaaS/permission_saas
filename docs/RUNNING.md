@@ -9,7 +9,8 @@ rodar fora do Docker, depurar e testar. A visão geral e o comando para subir tu
 - Docker + Docker Compose (v2, comando `docker compose`). Basta isso para subir a solução: o build
   das aplicações acontece dentro das imagens.
 - Para rodar fora do Docker: JDK 21. O Maven Wrapper (`./mvnw`) já está em cada projeto e baixa a
-  versão certa do Maven sozinho.
+  versão certa do Maven sozinho. O front, fora do Docker, pede o Node.js 22.22+ (ver o
+  [`README.md` do front](https://github.com/Permission-SaaS/permission_saas_front#readme)).
 
 Cada aplicação é um projeto Maven independente, com seu próprio `pom.xml`, `mvnw` e `Dockerfile`, no
 seu próprio repositório, incluído aqui como submódulo: os comandos `./mvnw` rodam **dentro** da pasta
@@ -32,7 +33,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Sobem seis containers, na rede que o Compose cria para o projeto:
+Sobem sete containers, na rede que o Compose cria para o projeto:
 
 | Container            | Imagem                          | Porta na máquina            | Fala com                                                    |
 | -------------------- | ------------------------------- | --------------------------- | ----------------------------------------------------------- |
@@ -42,12 +43,24 @@ Sobem seis containers, na rede que o Compose cria para o projeto:
 | `postgres`           | `postgres:16`                   | 5432 (`POSTGRES_HOST_PORT`) | —                                                           |
 | `audit-postgres`     | `postgres:16`                   | 5433                        | —                                                           |
 | `rabbitmq`           | `rabbitmq:4-management`         | 5672 · 15672 (painel)       | —                                                           |
+| `front`              | `permission_saas_front/Dockerfile`  | 3000                    | `permission-service:8080` (o nginx repassa o `/api`)        |
 
 - As duas aplicações sobem com o profile `prod`, e só depois que o `config-server`, o banco de cada
   uma e o `rabbitmq` estão `healthy`.
 - Entre containers, o endereço é o **nome do serviço** e a porta de dentro, nunca `localhost`: num
   container, `localhost` é o próprio container.
 - As migrations do Flyway de cada aplicação rodam na subida, cada uma no seu banco.
+- O `front` sobe depois que o `permission-service` está `healthy`. A imagem tem dois estágios: o Node
+  roda o `npm ci` e o `npm run build`, e o nginx serve só o `dist/`, sem Node nem código-fonte. O
+  `nginx.conf` do front devolve o `index.html` para qualquer rota do React Router (o F5 em
+  `/projects/...` funciona) e repassa o `/api/...` para o `permission-service:8080`, sem o prefixo,
+  como o proxy do Vite faz em desenvolvimento. Com a API parada, o `/api` responde 504 em 5 s.
+- O `VITE_DEV_CLIENT_ID` do `.env` entra na imagem como argumento de build: o Vite grava o valor no
+  JavaScript. Mudar o `.env` e reiniciar o container não basta; rode `docker compose up -d --build front`.
+  O valor fica visível no navegador, então segredo nunca vai numa variável `VITE_`. Ela é provisória e
+  sai com o login de verdade.
+- Abra o front por `http://localhost:3000`. Pelo IP da rede (por exemplo, no celular), os avisos na tela
+  quebram: o `crypto.randomUUID()` só existe em HTTPS ou no `localhost`.
 - Os dados ficam em volumes (`permission_saas_pgdata`, `audit_pgdata`); o arquivo
   `logs/audit-events.txt` do `audit-service` fica no volume `audit_logs`, e as mensagens do RabbitMQ
   no `rabbitmq_data`. Tudo isso sobrevive a
@@ -56,7 +69,8 @@ Sobem seis containers, na rede que o Compose cria para o projeto:
 ```bash
 curl http://localhost:8080/ping                  # pong
 curl http://localhost:8081/actuator/health       # {"status":"UP",...}
-docker compose ps                                # os seis como "healthy"
+curl http://localhost:3000/api/ping              # pong, pelo nginx do front
+docker compose ps                                # os sete como "healthy"
 ```
 
 **Porta 5432 ocupada** por um PostgreSQL instalado na máquina: publique o banco em outra porta com
@@ -94,6 +108,7 @@ Em `prod`, se faltar uma variável ou o Config Server não responder, o serviço
 | `SWAGGER_USERNAME` / `SWAGGER_PASSWORD`                    | principal | `admin`/`admin123`                                            | vêm do `.env`                                                     |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `JWT_SECRET` | principal | valores de mentira                                            | vêm do `.env` (\*)                                                |
 | `POSTGRES_HOST_PORT`                                       | o Compose | —                                                             | `5432`: porta da **máquina** em que o banco principal é publicado |
+| `VITE_DEV_CLIENT_ID`                                       | o build do front | o `.env.local` do front                              | vem do `.env`, como argumento de build da imagem do `front`       |
 
 (\*) OAuth2 e JWT não são usados pelo fluxo implementado: o `SecurityConfig` desabilita o
 `oauth2Login`, e login/JWT é trabalho futuro. Mesmo assim, o client do Google precisa de um valor não
