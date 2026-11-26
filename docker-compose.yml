@@ -5,8 +5,6 @@ services:
       POSTGRES_DB: permissions_saas
       POSTGRES_USER: saas
       POSTGRES_PASSWORD: saas123
-    ports:
-      - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - permission_saas_pgdata:/var/lib/postgresql/data
       - ./docker/init:/docker-entrypoint-initdb.d
@@ -22,8 +20,6 @@ services:
       POSTGRES_DB: audit_db
       POSTGRES_USER: audit
       POSTGRES_PASSWORD: audit123
-    ports:
-      - "5433:5432"
     volumes:
       - audit_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -48,9 +44,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-    ports:
-      - "5672:5672"
-      - "15672:15672"
 
   config-server:
     build:
@@ -66,8 +59,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-    ports:
-      - "8888:8888"
 
   audit-service:
     build:
@@ -87,7 +78,6 @@ services:
       DB_PASSWORD: audit123
       RABBITMQ_USERNAME: saas
       RABBITMQ_PASSWORD: saas123
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006
     volumes:
       - audit_logs:/app/logs
     healthcheck:
@@ -96,15 +86,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    ports:
-      - "8081:8081"
-      - "5006:5006"
-    develop:
-      watch:
-        - action: rebuild
-          path: ./permission_saas_audit/src
-        - action: rebuild
-          path: ./permission_saas_audit/pom.xml
 
   permission-service:
     build:
@@ -129,7 +110,6 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       SWAGGER_USERNAME: ${SWAGGER_USERNAME}
       SWAGGER_PASSWORD: ${SWAGGER_PASSWORD}
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
       interval: 10s
@@ -138,15 +118,6 @@ services:
       start_period: 30s
     ports:
       - "8080:8080"
-      - "5005:5005"
-    develop:
-      watch:
-        - action: rebuild
-          path: ./permission_saas_api/src
-        - action: rebuild
-          path: ./permission_saas_api/pom.xml
-        - action: rebuild
-          path: ./.env
 
   front:
     build:

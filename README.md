@@ -44,6 +44,11 @@ docker compose up -d --build
 | `rabbitmq`           | 5672  | broker de mensagens; painel em http://localhost:15672 (`saas`/`saas123`) |
 | `front`              | 3000  | front-end em React, servido pelo nginx em http://localhost:3000 |
 
+Essas portas são as do desenvolvimento: o `docker-compose.override.yml`, que o Compose junta sozinho,
+abre as dos bancos, do RabbitMQ, do Config Server e do `audit-service`, além do debug remoto. A versão de
+servidor, `docker compose -f docker-compose.yml up -d --build`, publica só a 3000 e a 8080
+([`docs/RUNNING.md`](docs/RUNNING.md)).
+
 ```bash
 curl http://localhost:8080/ping                  # pong
 docker compose ps                                # os sete como "healthy"

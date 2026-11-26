@@ -46,7 +46,6 @@ out/
 .vscode/
 
 ### Docker ###
-docker-compose.override.yml
 .docker/
 *.env.docker
 

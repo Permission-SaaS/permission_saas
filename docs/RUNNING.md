@@ -45,6 +45,29 @@ Sobem sete containers, na rede que o Compose cria para o projeto:
 | `rabbitmq`           | `rabbitmq:4-management`         | 5672 · 15672 (painel)       | —                                                           |
 | `front`              | `permission_saas_front/Dockerfile`  | 3000                    | `permission-service:8080` (o nginx repassa o `/api`)        |
 
+### Desenvolvimento e versão de servidor
+
+A configuração fica em dois arquivos. O `docker-compose.yml` tem o que um servidor publicaria: só a 3000
+(o front) e a 8080 (a API que os sistemas dos clientes chamam). O `docker-compose.override.yml` tem o que
+só serve para desenvolver: as outras portas da tabela, o debug remoto (`JAVA_TOOL_OPTIONS` e as portas
+5005 e 5006) e o live reload (`develop.watch`).
+
+```bash
+docker compose up -d --build                        # desenvolvimento: junta os dois arquivos
+docker compose -f docker-compose.yml up -d --build  # versão de servidor: só a base
+docker compose config                               # o resultado da junção, para conferir
+```
+
+- Sem `-f`, o Compose lê o `docker-compose.override.yml` sozinho. Com `-f docker-compose.yml`, ele fica de
+  fora.
+- O override só **acrescenta**: as portas dele se somam às da base, e as variáveis do `environment` se
+  juntam por nome. Ele não consegue fechar uma porta que esteja na base, por isso a base é a versão
+  enxuta e nenhuma porta vai nos dois arquivos.
+- Sem a porta publicada, o container continua alcançável pelos outros na rede do Compose (a API fala com
+  `postgres:5432` nos dois casos). A porta publicada só abre o acesso de fora.
+- Na versão de servidor, o `audit-service`, o Config Server, os bancos e o RabbitMQ ficam fechados para
+  fora. O `audit-service` não tem Spring Security, então não pode ter porta aberta num servidor.
+
 - As duas aplicações sobem com o profile `prod`, e só depois que o `config-server`, o banco de cada
   uma e o `rabbitmq` estão `healthy`.
 - Entre containers, o endereço é o **nome do serviço** e a porta de dentro, nunca `localhost`: num
@@ -73,7 +96,8 @@ curl http://localhost:3000/api/ping              # pong, pelo nginx do front
 docker compose ps                                # os sete como "healthy"
 ```
 
-**Porta 5432 ocupada** por um PostgreSQL instalado na máquina: publique o banco em outra porta com
+**Porta 5432 ocupada** por um PostgreSQL instalado na máquina (só no desenvolvimento, que é onde o banco
+fica publicado): publique o banco em outra porta com
 `POSTGRES_HOST_PORT=5434 docker compose up -d --build`, ou ponha `POSTGRES_HOST_PORT=5434` no `.env`.
 Isso só muda o acesso de fora: entre containers, o banco continua em `postgres:5432`.
 
@@ -107,7 +131,7 @@ Em `prod`, se faltar uma variável ou o Config Server não responder, o serviço
 | `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD`                  | os dois   | `saas`/`saas123`                                              | os mesmos, definidos no `docker-compose.yml`                     |
 | `SWAGGER_USERNAME` / `SWAGGER_PASSWORD`                    | principal | `admin`/`admin123`                                            | vêm do `.env`                                                     |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `JWT_SECRET` | principal | valores de mentira                                            | vêm do `.env` (\*)                                                |
-| `POSTGRES_HOST_PORT`                                       | o Compose | —                                                             | `5432`: porta da **máquina** em que o banco principal é publicado |
+| `POSTGRES_HOST_PORT`                                       | o Compose | —                                                             | `5432`: porta da **máquina** em que o override publica o banco principal |
 | `VITE_DEV_CLIENT_ID`                                       | o build do front | o `.env.local` do front                              | vem do `.env`, como argumento de build da imagem do `front`       |
 
 (\*) OAuth2 e JWT não são usados pelo fluxo implementado: o `SecurityConfig` desabilita o
@@ -219,15 +243,17 @@ depurar com calma, suba a aplicação principal com
 ## Debug remoto do container
 
 O agente de debug (JDWP) **não** está dentro das imagens: o `Dockerfile` traz só o necessário para
-rodar a aplicação. Quem liga o debug é o `docker-compose.yml`, pela variável `JAVA_TOOL_OPTIONS`, que a
-JVM lê na partida. A aplicação principal escuta na porta `5005` e o `audit-service` na `5006`. Na IDE,
+rodar a aplicação. Quem liga o debug é o `docker-compose.override.yml`, pela variável `JAVA_TOOL_OPTIONS`,
+que a JVM lê na partida, e por isso ele só existe no desenvolvimento: o JDWP deixa executar código no
+container, sem senha, e não pode existir num servidor. A aplicação principal escuta na porta `5005` e o `audit-service` na `5006`. Na IDE,
 anexe (attach) um **Remote JVM Debug** em `localhost:5005` ou `localhost:5006`. O processo sobe com
 `suspend=n`, ou seja, não espera o debugger conectar para iniciar.
 
 ## Live reload com `docker compose watch`
 
 `docker compose watch` observa o `src/` e o `pom.xml` de cada aplicação, e o `./.env` no caso da
-principal, e rebuilda só o container afetado:
+principal, e rebuilda só o container afetado. Os blocos `develop.watch` ficam no override, então ele só
+funciona no desenvolvimento, sem `-f`:
 
 ```bash
 docker compose up -d --build   # sobe a stack uma vez

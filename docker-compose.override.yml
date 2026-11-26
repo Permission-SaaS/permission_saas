@@ -1,0 +1,49 @@
+# Só para desenvolvimento. O `docker compose up`, sem -f, junta este arquivo ao docker-compose.yml:
+# abre os bancos, o RabbitMQ, o Config Server e o audit-service para o host, liga o debug remoto
+# (JDWP) e o live reload. A versão de servidor ignora este arquivo:
+#   docker compose -f docker-compose.yml up -d --build
+# O override só acrescenta (as portas se somam às da base), então nenhuma porta vai nos dois arquivos.
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+
+  audit-postgres:
+    ports:
+      - "5433:5432"
+
+  rabbitmq:
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # painel
+
+  config-server:
+    ports:
+      - "8888:8888"
+
+  audit-service:
+    environment:
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006
+    ports:
+      - "8081:8081"
+      - "5006:5006"     # debug
+    develop:
+      watch:
+        - action: rebuild
+          path: ./permission_saas_audit/src
+        - action: rebuild
+          path: ./permission_saas_audit/pom.xml
+
+  permission-service:
+    environment:
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+    ports:
+      - "5005:5005"     # debug
+    develop:
+      watch:
+        - action: rebuild
+          path: ./permission_saas_api/src
+        - action: rebuild
+          path: ./permission_saas_api/pom.xml
+        - action: rebuild
+          path: ./.env
